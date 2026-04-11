@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EN → TH Novel Translator</title>
-<!-- Point 2: Load libraries early -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.min.js"></script>
 <style>
@@ -295,7 +294,7 @@ main {
 <body>
 <header>
     <div class="logo-mark"><div class="logo-badge">EN → TH</div><span class="logo-text">Novel Translator</span></div>
-    <span class="header-sub">แปลนิยายด้วย AI แบบรักษาบรรยากาศและชื่อเฉพาะ</span>
+    <span class="header-sub">แปลนิยายด้วย AI แบบรักษาบริบทและชื่อเฉพาะ</span>
 </header>
 <main>
     <div class="upload-zone" id="uploadZone">
@@ -330,7 +329,7 @@ main {
     </div>
     <div class="result-grid" id="resultGrid" style="display:none">
         <div class="panel">
-            <div class="panel-header"><span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span><div style="display:flex;gap:0.4rem"><button class="copy-btn" onclick="copyText('sourceDisplay')">คัดลอก</button><button class="copy-btn" onclick="exportDoc('source', event)"> .docx</button></div></div>
+            <div class="panel-header"><span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span><div style="display:flex;gap:0.4rem"><button class="copy-btn" onclick="copyText('sourceDisplay')">คัดลอก</button><button class="copy-btn" onclick="exportDoc('source', event)">⬇ .docx</button></div></div>
             <div class="panel-body"><div class="translation-content" id="sourceDisplay"></div></div>
         </div>
         <div class="panel">
@@ -344,21 +343,18 @@ main {
 const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
 const MAX_WORDS = 600;
 
-// ✅ Prompt สำหรับนิยาย: คงชื่อคน/เมืองเป็น EN, ห้ามใช้สัญลักษณ์พิเศษ, ตอบเฉพาะแปลไทย
-const SYSTEM_PROMPT = `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายและวรรณกรรมภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
-กฎการแปล:
-1. รักษาบรรยากาศ น้ำเสียง และสไตล์การเล่าเรื่องให้ตรงต้นฉบับ (ทางการ/กึ่งทางการ/ภาษาพูดตามบริบท)
-2. แปลบทสนทนาให้เป็นธรรมชาติ ใช้สรรพนามและระดับภาษาที่เหมาะสมกับตัวละคร
-3. รักษาโครงสร้างย่อหน้าและจังหวะการเล่าเรื่อง ห้ามตัดต่อหรือเพิ่มเนื้อหา
-4. ชื่อคน และชื่อเมือง/สถานที่: ให้คงเป็นภาษาอังกฤษไว้เลย (เช่น 'Harry', 'London') เพื่อความแม่นยำ
-5. ห้ามใช้สัญลักษณ์พิเศษ เครื่องหมาย Markdown อีโมจิ หรือการจัดรูปแบบใดๆ ในข้อความแปล ใช้เพียงข้อความธรรมดาและเครื่องหมายวรรคตอนมาตรฐานเท่านั้น
-6. ตอบเฉพาะข้อความแปลเท่านั้น ห้ามมีคำนำหน้าหรือคำอธิบาย
-7. หากมีบทกวีหรือคำคล้องจอง ให้รักษาอารมณ์และจังหวะด้วยภาษาไทยที่สละสลวย`;
+// ✅ Prompt ที่ปรับปรุงใหม่สำหรับการแปลวรรณกรรมและรักษาบริบทโดยเฉพาะ
+const SYSTEM_PROMPT = `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายและวรรณกรรมจากภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
+กฎการแปลที่ต้องปฏิบัติตามอย่างเคร่งครัด:
+1. รักษาความหมายดั้งเดิม: แปลให้ตรงความหมาย ห้ามตัดทอน เพิ่มเติม หรือแต่งเนื้อหาเองเด็ดขาด
+2. บริบทและสรรพนาม: วิเคราะห์ความสัมพันธ์ของตัวละครเพื่อใช้สรรพนาม (เช่น ข้า-เจ้า, ฉัน-เธอ, ผม-คุณ) ให้คงที่และเหมาะสมกับเซ็ตติ้งของเรื่อง
+3. ชื่อเฉพาะ: ชื่อตัวละคร ชื่อเมือง สกิล เวทมนตร์ หรือสถานที่ ให้ "ทับศัพท์เป็นภาษาไทย" ที่ออกเสียงเป็นธรรมชาติ หรือถ้าไม่แน่ใจให้คงภาษาอังกฤษไว้ ห้ามแปลตรงตัว (เช่น Blackwood -> แบล็กวูด, ไม่ใช่ ไม้ดำ)
+4. สำนวนและมุกตลก: ให้แปลโดยเน้นความหมายและอรรถรสแบบไทย ไม่แปลตรงตัวแบบคำต่อคำ
+5. รูปแบบย่อหน้า: ต้องรักษาการเว้นบรรทัดและโครงสร้างย่อหน้าให้ตรงกับต้นฉบับเป๊ะๆ
+6. เอาต์พุต: ตอบกลับเฉพาะ "ข้อความที่แปลเสร็จแล้ว" เท่านั้น ห้ามใส่คำอธิบาย ห้ามใช้ Markdown (เช่น ** หรือ *) และห้ามเกริ่นนำใดๆ`;
 
 let extractedText = '';
 let paragraphs = [];
-
-// Point 2: Library Readiness Check
 let isLibrariesReady = false;
 
 window.addEventListener('load', () => {
@@ -370,7 +366,6 @@ window.addEventListener('load', () => {
         }
     }, 100);
     
-    // Timeout fallback just in case
     setTimeout(() => {
         if (!isLibrariesReady) {
             console.warn('Libraries might not be fully loaded, proceeding anyway...');
@@ -409,7 +404,6 @@ function handleFile(file) {
     const reader = new FileReader();
     reader.onload = async e => {
         try {
-            // Point 2: Wait for library readiness if needed (though usually load by now)
             if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
             
             const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
@@ -443,10 +437,9 @@ function buildNovelChunks(paragraphs, maxWords) {
         if (w > maxWords) {
             if (current.length > 0) {
                 chunks.push(current.join('\n\n'));
-                current = []; // Point 6: Reset completely instead of keeping last item
+                current = []; 
                 currentWords = 0;
             }
-            // Point 7: Improved Regex for sentences
             const sentences = para.match(/[^.!?]+[.!?]*\s*/g) || [para];
             let subChunk = [];
             let subWords = 0;
@@ -454,7 +447,7 @@ function buildNovelChunks(paragraphs, maxWords) {
                 const sw = countWords(sent);
                 if (subWords + sw > maxWords && subChunk.length > 0) {
                     chunks.push(subChunk.join(' '));
-                    subChunk = []; // Reset subChunk properly
+                    subChunk = []; 
                     subWords = 0;
                 }
                 subChunk.push(sent);
@@ -464,7 +457,7 @@ function buildNovelChunks(paragraphs, maxWords) {
         } else {
             if (currentWords + w > maxWords && current.length > 0) {
                 chunks.push(current.join('\n\n'));
-                current = []; // Point 6: Clear array to prevent overlap/repetition
+                current = []; 
                 currentWords = 0;
             }
             current.push(para);
@@ -475,20 +468,30 @@ function buildNovelChunks(paragraphs, maxWords) {
     return chunks;
 }
 
-async function translateChunk(text, retries = 2) {
+// ✅ อัปเดตฟังก์ชันแปลให้รับ Context ก่อนหน้า
+async function translateChunk(text, previousContext = '', retries = 2) {
     for (let attempt = 0; attempt <= retries; attempt++) {
         let resp;
+        
+        // จัดระเบียบ Prompt เพื่อส่ง Context ไปให้ด้วย
+        let userContent = "";
+        if (previousContext) {
+            userContent += `[Context from previous part - DO NOT translate this part, read for context only]\n${previousContext}\n\n`;
+        }
+        userContent += `[Text to Translate - แปลเฉพาะส่วนนี้เท่านั้น]\n${text}`;
+
         try {
             resp = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    max_tokens: 2048,
-                    temperature: 0.3,
-                    top_p: 0.85,
+                    max_tokens: 2500, // เพิ่มเผื่อเนื้อหาที่อาจจะยาวขึ้น
+                    temperature: 0.45, // ปรับให้ภาษาเป็นธรรมชาติขึ้น
+                    top_p: 0.9,
+                    frequency_penalty: 0.2, // ลดการใช้คำซ้ำๆ
                     messages: [
                         { role: 'system', content: SYSTEM_PROMPT },
-                        { role: 'user', content: 'ต้นฉบับ:\n' + text }
+                        { role: 'user', content: userContent }
                     ]
                 })
             });
@@ -510,20 +513,23 @@ async function translateChunk(text, retries = 2) {
         
         if (data.error && attempt < retries) continue;
         
-        // Point 4: Strict Validation
         const content = data.choices?.[0]?.message?.content;
         if (!content) {
              if (attempt < retries) continue;
              throw new Error('Invalid API structure received');
         }
         
-        const result = content.trim();
+        // กรองแท็ก [Text to Translate] ที่ AI อาจจะตอบกลับมาด้วย
+        let result = content.trim();
+        result = result.replace(/^\[Text to Translate[^\]]*\]\n?/i, '');
+        
         if (!result && attempt < retries) continue;
         return result;
     }
     throw new Error('Translation failed after retries');
 }
 
+// ✅ อัปเดตการวนลูปให้ส่ง Context ไปด้วย
 document.getElementById('translateBtn').addEventListener('click', async () => {
     if (!extractedText) return;
     const btn = document.getElementById('translateBtn');
@@ -548,7 +554,8 @@ document.getElementById('translateBtn').addEventListener('click', async () => {
     
     const translatedParts = [];
     let successCount = 0;
-    let updateCounter = 0; // Point 10: Counter for DOM updates
+    let updateCounter = 0; 
+    let previousContext = ''; // ตัวแปรเก็บ Context
 
     try {
         for (let i = 0; i < chunks.length; i++) {
@@ -557,14 +564,18 @@ document.getElementById('translateBtn').addEventListener('click', async () => {
             progressPct.textContent = pct + '%';
             progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
             
-            // Point 9: Rate Limiting
             if (i > 0) await new Promise(r => setTimeout(r, 350));
 
-            const translated = await translateChunk(chunks[i]);
+            // ส่ง previousContext ไปให้ AI อ่านด้วย
+            const translated = await translateChunk(chunks[i], previousContext);
             translatedParts.push(translated);
             successCount++;
             
-            // Point 10: Update DOM less frequently (every 2 chunks)
+            // ดึงข้อความต้นฉบับ 400 ตัวอักษรสุดท้ายจากชิ้นนี้ ไปเป็นบริบทให้ชิ้นถัดไป
+            previousContext = chunks[i].length > 400 
+                ? chunks[i].substring(chunks[i].length - 400) 
+                : chunks[i];
+            
             updateCounter++;
             if (updateCounter % 2 === 0 || i === chunks.length - 1) {
                 document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
@@ -581,21 +592,17 @@ document.getElementById('translateBtn').addEventListener('click', async () => {
             : `แปลเสร็จ ${translatedParts.length} จาก ${chunks.length} ชิ้น`;
             
     } catch (err) {
-        // Point 5: Error handling inside loop logic if needed, but mainly handled by finally
         showError(`เกิดข้อผิดพลาด: ${err.message}`);
         progressStatus.textContent = "หยุดเนื่องจากข้อผิดพลาด";
         progressStatus.style.color = "#991b1b";
     } finally {
-        // Point 5: Always reset UI state
         btn.disabled = false;
         spinner.classList.remove('visible');
         icon.style.display = '';
     }
 });
 
-// Point 1: Accept event parameter
 async function exportDoc(mode, evt) {
-    // Point 3: Check window.docx directly
     if (!window.docx) {
         showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
         return;
@@ -605,7 +612,6 @@ async function exportDoc(mode, evt) {
     const translationText = document.getElementById('translationDisplay').textContent;
     const fileName = (document.getElementById('fileName').textContent || 'document').replace('.docx', '');
     
-    // Safe access to event target
     const btn = evt ? evt.currentTarget : null;
     let origText = '';
     
@@ -696,7 +702,6 @@ async function exportDoc(mode, evt) {
         showError('เกิดข้อผิดพลาดขณะสร้างไฟล์: ' + err.message);
         console.error(err);
     } finally {
-        // Point 5: Ensure button resets even on error
         if (btn) {
             btn.textContent = origText;
             btn.disabled = false;
@@ -720,7 +725,7 @@ function copyText(id) {
 }
 
 function showError(msg) {
-    document.getElementById('errorBox').textContent = '️ ' + msg;
+    document.getElementById('errorBox').textContent = '⚠️ ' + msg;
     document.getElementById('errorBox').classList.add('visible');
 }
 function clearError() {
