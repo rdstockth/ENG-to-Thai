@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EN → TH Novel & Academic Translator</title>
-<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/docx@9.6.1/build/index.umd.min.js"></script>
@@ -47,8 +46,6 @@ main {
     max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem;
     display: flex; flex-direction: column; gap: 1.5rem;
 }
-
-/* ============ TABS & SELECTORS ============ */
 .input-tabs, .mode-selector {
     display: flex; gap: 0.5rem; background: var(--surface);
     padding: 0.4rem; border-radius: var(--radius);
@@ -69,8 +66,6 @@ main {
 .mode-desc {
     font-size: 12px; color: var(--text-subtle); margin-top: 4px; padding-left: 4px;
 }
-
-/* ============ UPLOAD ZONE ============ */
 .upload-zone {
     background: var(--surface); border: 2px dashed var(--border);
     border-radius: var(--radius); padding: 3rem 2rem; text-align: center;
@@ -102,8 +97,6 @@ main {
     border: 1px solid #b8ddc7; border-radius: 8px;
     padding: 0.4rem 1rem; font-size: 14px; font-weight: 500; margin-top: 1rem;
 }
-
-/* ============ TEXT INPUT ZONE ============ */
 .text-input-zone {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 1.5rem; display: none;
@@ -141,8 +134,6 @@ main {
     color: var(--text); cursor: pointer; transition: all 0.15s;
 }
 .btn-sm:hover { background: var(--surface2); }
-
-/* ============ PANELS ============ */
 .panel {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
@@ -240,12 +231,10 @@ main {
 }
 .spinner.visible { display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
 .loading-overlay {
     position: fixed; inset: 0; background: rgba(250,248,244,0.9);
     display: none; align-items: center; justify-content: center;
@@ -269,7 +258,6 @@ main {
     <span class="header-sub">แปลนิยายและเอกสารวิชาการด้วย AI แบบรักษาโครงสร้าง</span>
 </header>
 <main>
-    <!-- INPUT TABS -->
     <div class="input-tabs">
         <button class="tab-btn active" data-tab="file" onclick="switchInputTab('file')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -286,7 +274,6 @@ main {
         </button>
     </div>
 
-    <!-- TRANSLATION MODE SELECTOR -->
     <div class="mode-selector" id="modeSelector">
         <button class="mode-btn active" data-mode="NOVEL" onclick="setMode('NOVEL')">
             📖 นิยาย/วรรณกรรม
@@ -297,7 +284,6 @@ main {
     </div>
     <div class="mode-desc" id="modeDesc">เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ</div>
 
-    <!-- FILE UPLOAD ZONE -->
     <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept=".docx,.pdf" />
         <div class="upload-icon">
@@ -320,7 +306,6 @@ main {
         </div>
     </div>
 
-    <!-- TEXT INPUT ZONE -->
     <div class="text-input-zone" id="textInputZone">
         <div class="text-input-header">
             <span class="text-input-title">วางข้อความภาษาอังกฤษที่ต้องการแปล</span>
@@ -337,9 +322,9 @@ main {
             <button class="btn-sm" onclick="useTextInput()">✅ ใช้ข้อความนี้</button>
         </div>
     </div>
-    
+
     <div class="error-box" id="errorBox"></div>
-    
+
     <div class="panel" id="sourcePanel" style="display:none">
         <div class="panel-header">
             <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
@@ -347,7 +332,7 @@ main {
         </div>
         <div class="panel-body"><div class="text-content" id="sourceText"></div></div>
     </div>
-    
+
     <div class="panel" id="controlPanel" style="display:none">
         <div class="panel-body">
             <div class="controls">
@@ -367,13 +352,13 @@ main {
             </div>
         </div>
     </div>
-    
+
     <div class="progress-wrap" id="progressWrap">
         <div class="progress-label"><span>กำลังแปล...</span><span id="progressPct">0%</span></div>
         <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
         <div class="progress-status" id="progressStatus">กำลังเตรียม...</div>
     </div>
-    
+
     <div class="result-grid" id="resultGrid" style="display:none">
         <div class="panel">
             <div class="panel-header">
@@ -436,7 +421,7 @@ const MODE_CONFIG = {
 - คลาส/อาชีพ: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก/นักลอบเร้น, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์
 
 🔤 สำนวนและ Phrasal Verbs (แปลตามความหมาย ห้ามแปลคำต่อคำ):
-- "leave X alone" → ปล่อยให้ X อยู่ตามลำพัง / ไม่เข้าไปยุ่งเกี่ยวกับ X (ไม่ใช่ "ปล่อย X คนเดียว")
+- "leave X alone" → ปล่อยให้ X อยู่ตามลำพัง / ไม่เข้าไปยุ่งเกี่ยวกับ X
 - "go along with" → ยอมรับ / เห็นด้วย / ทำตาม
 - "give up" → ยอมแพ้ / เลิก / หยุด
 - "make up" → แต่งเรื่อง / ชดเชย / แต่งหน้า (ดูบริบท)
@@ -448,7 +433,7 @@ const MODE_CONFIG = {
 - "hold on" → รอก่อน / อดทน (ดูบริบท)
 - "take on" → รับมือ / รับงาน / เผชิญ
 - "show up" → ปรากฏตัว / มาถึง
-- สำนวนเปรียบเปรย เช่น "bite the bullet" → กัดฟันทน, "kick the bucket" → ตาย, "spill the beans" → เปิดเผยความลับ ให้แปลตามความหมายเชิงสำนวน ไม่แปลคำต่อคำ
+- สำนวนเปรียบเปรย เช่น "bite the bullet" → กัดฟันทน, "kick the bucket" → ตาย, "spill the beans" → เปิดเผยความลับ
 
 🎭 การจัดการเนื้อหาพิเศษ:
 - บทสนทนา: ใช้เครื่องหมายคำพูดไทย "..." และแทรกคำกริยาบทพูดให้ธรรมชาติ
@@ -497,6 +482,7 @@ let currentTranslationMode = 'NOVEL';
 let isLibrariesReady = false;
 
 // ==================== INIT ====================
+// FIX: bumped timeout from 8s → 15s to allow CDN scripts to fully load
 window.addEventListener('load', () => {
     const checkInterval = setInterval(() => {
         if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
@@ -507,13 +493,13 @@ window.addEventListener('load', () => {
     }, 100);
     setTimeout(() => {
         if (!isLibrariesReady) {
-            console.warn('⚠️ Libraries might not be fully loaded, proceeding anyway...');
+            console.warn('⚠️ Libraries might not be fully loaded after 15s, proceeding anyway...');
             isLibrariesReady = true;
         }
-    }, 8000);
+    }, 15000);
 });
 
-// ==================== DOM & MODE SELECTOR ====================
+// ==================== DOM ====================
 const fileInput = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
 const textInputZone = document.getElementById('textInputZone');
@@ -535,10 +521,7 @@ function switchInputTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
     uploadZone.style.display = tab === 'file' ? 'block' : 'none';
     textInputZone.classList.toggle('active', tab === 'text');
-    if (tab === 'text') {
-        textInput.focus();
-        updateTextCharCount();
-    }
+    if (tab === 'text') { textInput.focus(); updateTextCharCount(); }
     document.getElementById('sourcePanel').style.display = 'none';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('resultGrid').style.display = 'none';
@@ -588,7 +571,6 @@ function hideLoading() { loadingOverlay.classList.remove('visible'); }
 async function handleFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['docx', 'pdf'].includes(ext)) return showError('กรุณาเลือกไฟล์ .docx หรือ .pdf เท่านั้น');
-    
     clearError();
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileChip').style.display = 'block';
@@ -597,11 +579,9 @@ async function handleFile(file) {
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
     showLoading(ext === 'pdf' ? 'กำลังอ่านไฟล์ PDF...' : 'กำลังอ่านไฟล์...');
-
     try {
         let text = '';
         const arrayBuffer = await file.arrayBuffer();
-        
         if (ext === 'docx') {
             if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
             const result = await mammoth.extractRawText({ arrayBuffer });
@@ -667,11 +647,9 @@ function buildNovelChunks(paragraphs, maxWords) {
     const chunks = [];
     let current = [];
     let currentWords = 0;
-
     for (let i = 0; i < paragraphs.length; i++) {
         const para = paragraphs[i];
         const wordCount = countWords(para);
-        
         if (wordCount > maxWords) {
             if (current.length > 0) { chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0; }
             const sentences = para.match(/[^.!?]+[.!?]+/g) || [para];
@@ -702,28 +680,47 @@ function getChunkContext(chunks) {
     return sentences.slice(-3).join(' ').trim();
 }
 
-// ==================== VALIDATION ====================
+// ==================== VALIDATION (FIXED) ====================
+// FIX 1: ratio range widened — Thai text commonly runs 0.3x–4x English char count
+// FIX 2: brackets check replaced — parentheses are valid (used for name format "ชื่อไทย (English)")
+//         only raw Markdown tokens are now flagged
 function validateTranslation(original, translated) {
     const issues = [];
-    if (!/[ก-๙]/.test(translated)) issues.push('ไม่พบข้อความภาษาไทย');
-    if (/[*#`>|\[\]{}()]/.test(translated) && !/[\(\)]/.test(translated.replace(/\([^)]+\)/g, ''))) issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
-    
+
+    // Must contain Thai characters
+    if (!/[ก-๙]/.test(translated)) {
+        issues.push('ไม่พบข้อความภาษาไทย');
+    }
+
+    // Only flag actual Markdown formatting symbols, NOT parentheses
+    if (/[*#`>|]/.test(translated)) {
+        issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
+    }
+
+    // Widened ratio: Thai regularly hits 1.5x–3.5x English char length
     const ratio = translated.length / Math.max(original.length, 1);
-    const maxRatio = currentTranslationMode === 'ACADEMIC' ? 3.0 : 2.5;
-    if (ratio < 0.4 || ratio > maxRatio) issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
-    
+    const minRatio = 0.3;
+    const maxRatio = currentTranslationMode === 'ACADEMIC' ? 4.5 : 4.0;
+    if (ratio < minRatio || ratio > maxRatio) {
+        issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
+    }
+
+    // Reject system-prompt echo
     const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation'];
-    if (sysPhrases.some(p => translated.toLowerCase().includes(p))) issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
+    if (sysPhrases.some(p => translated.toLowerCase().includes(p))) {
+        issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
+    }
+
     return { valid: issues.length === 0, issues };
 }
 
 // ==================== API TRANSLATION ====================
 async function translateChunk(text, context = '', retries = 2) {
     const config = MODE_CONFIG[currentTranslationMode];
-    const userPrompt = context 
+    const userPrompt = context
         ? `บริบทก่อนหน้า:\n${context}\n\n---\n\nข้อความต่อไปที่ต้องแปล:\n${text}`
         : `ข้อความที่ต้องแปล:\n${text}`;
-    
+
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             const response = await fetch(API_URL, {
@@ -741,25 +738,25 @@ async function translateChunk(text, context = '', retries = 2) {
                     ]
                 })
             });
-            
+
             if (!response.ok) {
                 const errText = await response.text().catch(() => '');
                 console.warn(`HTTP ${response.status}: ${errText}`);
                 if (attempt < retries) { await sleep(RETRY_DELAY * (attempt + 1)); continue; }
                 throw new Error(`API error: HTTP ${response.status}`);
             }
-            
+
             let data;
-            try { data = JSON.parse(await response.text()); } 
+            try { data = JSON.parse(await response.text()); }
             catch (e) { if (attempt < retries) { await sleep(RETRY_DELAY); continue; } throw new Error('Invalid JSON response'); }
-            
+
             const content = data.choices?.[0]?.message?.content;
             if (!content) {
                 if (data.error) console.warn('API error:', data.error);
                 if (attempt < retries) { await sleep(RETRY_DELAY); continue; }
                 throw new Error('Empty response from API');
             }
-            
+
             const result = content.trim();
             const validation = validateTranslation(text, result);
             if (!validation.valid && attempt < retries) {
@@ -788,24 +785,24 @@ translateBtn.addEventListener('click', async () => {
     document.getElementById('spinner').classList.add('visible');
     document.getElementById('translateIcon').style.display = 'none';
     clearError();
-    
+
     const chunks = buildNovelChunks(paragraphs, MAX_WORDS);
     console.log(`📦 Split into ${chunks.length} chunks for translation (${currentTranslationMode})`);
-    
+
     const progressWrap = document.getElementById('progressWrap');
     const progressFill = document.getElementById('progressFill');
     const progressPct = document.getElementById('progressPct');
     const progressStatus = document.getElementById('progressStatus');
-    
+
     progressWrap.classList.add('visible');
     document.getElementById('resultGrid').style.display = 'grid';
     document.getElementById('sourceDisplay').textContent = extractedText;
     document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังเริ่มต้นการแปล...</div>';
-    
+
     translatedParts = [];
     lastTranslatedContext = '';
     let successCount = 0;
-    
+
     try {
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
@@ -813,26 +810,26 @@ translateBtn.addEventListener('click', async () => {
             progressFill.style.width = pct + '%';
             progressPct.textContent = pct + '%';
             progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
-            
+
             if (i > 0) await sleep(RATE_LIMIT_DELAY);
-            
-            const prevContext = lastTranslatedContext 
-                ? `คำแปลก่อนหน้า:\n${lastTranslatedContext.slice(-400)}` 
+
+            const prevContext = lastTranslatedContext
+                ? `คำแปลก่อนหน้า:\n${lastTranslatedContext.slice(-400)}`
                 : '';
-            
+
             const translated = await translateChunk(chunk.text, prevContext);
             translatedParts.push(translated);
             lastTranslatedContext = translated;
             successCount++;
-            
+
             if (i % 2 === 0 || i === chunks.length - 1) {
                 document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
             }
         }
-        
+
         const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
         document.getElementById('translationDisplay').textContent = finalText;
-        
+
         progressFill.style.width = '100%';
         progressPct.textContent = '100%';
         if (successCount === chunks.length) {
@@ -894,14 +891,7 @@ async function exportDoc(mode, evt) {
 
         const createParagraph = (text, isEnglish = false, headingLevel = null) => {
             const opts = {
-                children: [
-                    new TextRun({
-                        text: text,
-                        font: isEnglish ? 'Calibri' : 'Sarabun',
-                        size: headingLevel ? 28 : 24,
-                        bold: !!headingLevel,
-                    })
-                ],
+                children: [new TextRun({ text, font: isEnglish ? 'Calibri' : 'Sarabun', size: headingLevel ? 28 : 24, bold: !!headingLevel })],
                 spacing: { after: 200 },
             };
             if (headingLevel) opts.heading = headingLevel;
@@ -909,40 +899,18 @@ async function exportDoc(mode, evt) {
         };
 
         const textToParagraphs = (text, isEnglish) =>
-            text.split(/\n+/)
-                .map(p => p.trim())
-                .filter(Boolean)
-                .map(p => createParagraph(p, isEnglish));
+            text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => createParagraph(p, isEnglish));
 
         const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
-        const cellBorders = {
-            top: cellBorder, bottom: cellBorder,
-            left: cellBorder, right: cellBorder
-        };
+        const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
         const HALF_WIDTH = 4680;
 
         let doc;
 
         if (mode === 'source') {
-            doc = new Document({
-                sections: [{
-                    children: [
-                        createParagraph('ต้นฉบับภาษาอังกฤษ', true, HeadingLevel.HEADING_1),
-                        ...textToParagraphs(sourceText, true)
-                    ]
-                }]
-            });
-
+            doc = new Document({ sections: [{ children: [createParagraph('ต้นฉบับภาษาอังกฤษ', true, HeadingLevel.HEADING_1), ...textToParagraphs(sourceText, true)] }] });
         } else if (mode === 'translation') {
-            doc = new Document({
-                sections: [{
-                    children: [
-                        createParagraph('คำแปลภาษาไทย', false, HeadingLevel.HEADING_1),
-                        ...textToParagraphs(translationText, false)
-                    ]
-                }]
-            });
-
+            doc = new Document({ sections: [{ children: [createParagraph('คำแปลภาษาไทย', false, HeadingLevel.HEADING_1), ...textToParagraphs(translationText, false)] }] });
         } else {
             const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const thParas  = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
@@ -951,20 +919,8 @@ async function exportDoc(mode, evt) {
             const headerRow = new TableRow({
                 tableHeader: true,
                 children: [
-                    new TableCell({
-                        borders: cellBorders,
-                        width: { size: HALF_WIDTH, type: WidthType.DXA },
-                        shading: { fill: 'D6E4F7', type: ShadingType.CLEAR },
-                        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-                        children: [createParagraph('English (ต้นฉบับ)', true, HeadingLevel.HEADING_3)]
-                    }),
-                    new TableCell({
-                        borders: cellBorders,
-                        width: { size: HALF_WIDTH, type: WidthType.DXA },
-                        shading: { fill: 'FEF0E6', type: ShadingType.CLEAR },
-                        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-                        children: [createParagraph('ภาษาไทย (คำแปล)', false, HeadingLevel.HEADING_3)]
-                    })
+                    new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, shading: { fill: 'D6E4F7', type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph('English (ต้นฉบับ)', true, HeadingLevel.HEADING_3)] }),
+                    new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, shading: { fill: 'FEF0E6', type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph('ภาษาไทย (คำแปล)', false, HeadingLevel.HEADING_3)] })
                 ]
             });
 
@@ -972,18 +928,8 @@ async function exportDoc(mode, evt) {
             for (let i = 0; i < maxLen; i++) {
                 dataRows.push(new TableRow({
                     children: [
-                        new TableCell({
-                            borders: cellBorders,
-                            width: { size: HALF_WIDTH, type: WidthType.DXA },
-                            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-                            children: [createParagraph(srcParas[i] || '', true)]
-                        }),
-                        new TableCell({
-                            borders: cellBorders,
-                            width: { size: HALF_WIDTH, type: WidthType.DXA },
-                            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-                            children: [createParagraph(thParas[i] || '', false)]
-                        })
+                        new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph(srcParas[i] || '', true)] }),
+                        new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph(thParas[i] || '', false)] })
                     ]
                 }));
             }
@@ -992,11 +938,7 @@ async function exportDoc(mode, evt) {
                 sections: [{
                     children: [
                         createParagraph('เปรียบเทียบต้นฉบับและคำแปล', false, HeadingLevel.HEADING_1),
-                        new Table({
-                            width: { size: HALF_WIDTH * 2, type: WidthType.DXA },
-                            columnWidths: [HALF_WIDTH, HALF_WIDTH],
-                            rows: [headerRow, ...dataRows]
-                        })
+                        new Table({ width: { size: HALF_WIDTH * 2, type: WidthType.DXA }, columnWidths: [HALF_WIDTH, HALF_WIDTH], rows: [headerRow, ...dataRows] })
                     ]
                 }]
             });
@@ -1005,12 +947,9 @@ async function exportDoc(mode, evt) {
         const blob = await Packer.toBlob(doc);
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
-        a.href     = url;
-        a.download = `${baseName}_${mode}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = `${baseName}_${mode}.docx`;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
 
     } catch (err) {
         console.error('Export error:', err);
