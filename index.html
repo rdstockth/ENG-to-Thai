@@ -394,9 +394,9 @@ main {
 <script>
 // ==================== CONFIG & MODES ====================
 const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
-const MAX_WORDS = 500;
+const MAX_WORDS = 350;       // #9: ลดจาก 500 → ป้องกัน token overflow
 const RETRY_DELAY = 1500;
-const RATE_LIMIT_DELAY = 400;
+const RATE_LIMIT_DELAY = 800; // #6: เพิ่มจาก 400 → ลด 429 errors
 
 const MODE_CONFIG = {
     NOVEL: {
@@ -606,10 +606,12 @@ async function handleFile(file) {
                         currentLine = '';
                     }
 
-                    // FIX 1: เติม space ระหว่าง text items เพื่อป้องกันคำติดกัน
+                    // FIX 1+3: เติม space ระหว่าง text items เพื่อป้องกันคำติดกัน
+                    // ยกเว้น punctuation ท้ายบรรทัด เช่น "word," "word."
                     const needsSpace =
                         currentLine.length > 0 &&
                         !currentLine.endsWith(' ') &&
+                        !/[.,!?)\-]$/.test(currentLine) &&
                         item.str.length > 0 &&
                         !item.str.startsWith(' ');
                     currentLine += (needsSpace ? ' ' : '') + item.str;
@@ -622,6 +624,7 @@ async function handleFile(file) {
                 }
                 if (currentLine.trim()) pageLines.push(currentLine.trim());
                 fullText.push(pageLines.join('\n').trim());
+                page.cleanup(); // #7: ป้องกัน memory leak
                 if (pageNum % 5 === 0) await sleep(50);
             }
             text = fullText.join('\n\n').trim();
@@ -677,41 +680,34 @@ function buildNovelChunks(paragraphs, maxWords) {
         const para = paragraphs[i];
         const wordCount = countWords(para);
         if (wordCount > maxWords) {
-            if (current.length > 0) { chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0; }
+            if (current.length > 0) { chunks.push({ text: current.join('\n\n') }); current = []; currentWords = 0; }
             const sentences = para.match(/[^.!?]+[.!?]+/g) || [para];
             let subChunk = [], subWords = 0;
             for (const sent of sentences) {
                 const sw = countWords(sent);
                 if (subWords + sw > maxWords && subChunk.length > 0) {
-                    chunks.push({ text: subChunk.join(' '), context: getChunkContext(chunks) }); subChunk = []; subWords = 0;
+                    chunks.push({ text: subChunk.join(' ') }); subChunk = []; subWords = 0;
                 }
                 subChunk.push(sent); subWords += sw;
             }
-            if (subChunk.length > 0) chunks.push({ text: subChunk.join(' '), context: getChunkContext(chunks) });
+            if (subChunk.length > 0) chunks.push({ text: subChunk.join(' ') });
         } else {
             if (currentWords + wordCount > maxWords && current.length > 0) {
-                chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0;
+                chunks.push({ text: current.join('\n\n') }); current = []; currentWords = 0;
             }
             current.push(para); currentWords += wordCount;
         }
     }
-    if (current.length > 0) chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) });
+    if (current.length > 0) chunks.push({ text: current.join('\n\n') });
     return chunks;
-}
-
-function getChunkContext(chunks) {
-    if (chunks.length === 0) return '';
-    const lastChunk = chunks[chunks.length - 1].text;
-    const sentences = lastChunk.match(/[^.!?]+[.!?]+/g) || [];
-    return sentences.slice(-3).join(' ').trim();
 }
 
 // ==================== VALIDATION ====================
 function validateTranslation(original, translated) {
     const issues = [];
 
-    // ต้องมีอักษรไทย
-    if (!/[ก-๙]/.test(translated)) {
+    // #2: ข้ามเช็ค Thai ถ้า original เป็นตัวเลข/code/citation ที่ไม่มี Latin
+    if (!/[ก-๙]/.test(translated) && /[a-zA-Z]/.test(original)) {
         issues.push('ไม่พบข้อความภาษาไทย');
     }
 
@@ -785,15 +781,14 @@ async function translateChunk(text, context = '', retries = 2) {
             const validation = validateTranslation(text, result);
 
             if (!validation.valid && attempt < retries) {
-                // FIX 3: ratio-only issue → คำแปลน่าจะถูก ไม่ต้อง retry
-                const nonRatioIssues = validation.issues.filter(i => !i.includes('สัดส่วน'));
-                if (nonRatioIssues.length === 0) {
-                    console.info('Ratio warning only, accepting result:', validation.issues);
-                    return result;
+                // #5: retry เฉพาะกรณีไม่มีภาษาไทยเลย (model output ผิดจริง)
+                // กรณีอื่น (ratio, markdown) → ยอมรับผลและไม่เสีย API call
+                if (validation.issues.includes('ไม่พบข้อความภาษาไทย')) {
+                    console.warn('No Thai text found, retrying:', validation.issues);
+                    await sleep(RETRY_DELAY);
+                    continue;
                 }
-                console.warn('Validation failed, retrying:', validation.issues);
-                await sleep(RETRY_DELAY);
-                continue;
+                console.info('Non-critical validation issues, accepting result:', validation.issues);
             }
             return result;
         } catch (err) {
@@ -844,9 +839,9 @@ translateBtn.addEventListener('click', async () => {
 
             if (i > 0) await sleep(RATE_LIMIT_DELAY);
 
-            // FIX 4: ใช้ getTrailingContext แทน .slice(-400) เพื่อตัดที่ขอบ sentence
+            // #1: ส่ง context ตรง ๆ ไม่ต้องห่อ label ซ้ำ (label อยู่ใน translateChunk แล้ว)
             const prevContext = lastTranslatedContext
-                ? `คำแปลก่อนหน้า:\n${getTrailingContext(lastTranslatedContext)}`
+                ? getTrailingContext(lastTranslatedContext)
                 : '';
 
             const translated = await translateChunk(chunk.text, prevContext);
@@ -854,8 +849,10 @@ translateBtn.addEventListener('click', async () => {
             lastTranslatedContext = translated;
             successCount++;
 
-            // FIX 6: อัปเดต UI ทุก chunk ไม่ใช่ทุก 2 chunk
-            document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
+            // #8: อัปเดต UI ทุก 2 chunks → ลด reflow บน chunk จำนวนมาก
+            if (i % 2 === 0 || i === chunks.length - 1) {
+                document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
+            }
         }
 
         const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
