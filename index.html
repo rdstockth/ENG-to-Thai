@@ -5,13 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EN → TH Novel & Academic Translator</title>
 <!-- Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.0/mammoth.browser.min.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.6.205/pdf.min.js"></script>
-
-<script src="https://unpkg.com/docx@9.6.1/build/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/docx@9.6.1/build/index.umd.min.js"></script>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc ="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.6.205/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
@@ -477,7 +475,7 @@ window.addEventListener('load', () => {
         if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
             isLibrariesReady = true;
             clearInterval(checkInterval);
-            console.log('✅ Libraries loaded successfully');
+            console.log('✅ Libraries loaded: mammoth 1.11.0 | pdf.js 3.11.174 | docx 9.6.1');
         }
     }, 100);
     setTimeout(() => {
@@ -502,7 +500,6 @@ function setMode(mode) {
     currentTranslationMode = mode;
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     document.getElementById('modeDesc').textContent = MODE_CONFIG[mode].desc;
-    // FIX 4: use dedicated span instead of fragile nextSibling text node
     document.getElementById('translateLabel').textContent = `เริ่มแปล (${MODE_CONFIG[mode].name})`;
 }
 
@@ -590,7 +587,6 @@ async function handleFile(file) {
                 loadingText.textContent = `กำลังอ่านหน้า ${pageNum} จาก ${pdf.numPages}...`;
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
-                // FIX 2: use Y-position + hasEOL to reconstruct paragraph structure
                 let pageLines = [];
                 let currentLine = '';
                 let prevY = null;
@@ -605,7 +601,6 @@ async function handleFile(file) {
                     prevY = curY;
                 }
                 if (currentLine.trim()) pageLines.push(currentLine.trim());
-                // Group lines into paragraphs (blank gap = new paragraph)
                 fullText.push(pageLines.join('\n').trim());
                 if (pageNum % 5 === 0) await sleep(50);
             }
@@ -649,8 +644,6 @@ function buildNovelChunks(paragraphs, maxWords) {
     for (let i = 0; i < paragraphs.length; i++) {
         const para = paragraphs[i];
         const wordCount = countWords(para);
-        const isDialogueStart = /^["']/.test(para.trim());
-        const isDialogueEnd = /["'][.!?]["']?\s*$/.test(para.trim());
         
         if (wordCount > maxWords) {
             if (current.length > 0) { chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0; }
@@ -666,7 +659,6 @@ function buildNovelChunks(paragraphs, maxWords) {
             if (subChunk.length > 0) chunks.push({ text: subChunk.join(' '), context: getChunkContext(chunks) });
         } else {
             if (currentWords + wordCount > maxWords && current.length > 0) {
-                // FIX 3: always flush — dialogue bypass caused unbounded chunk growth
                 chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0;
             }
             current.push(para); currentWords += wordCount;
@@ -853,7 +845,7 @@ resetBtn.addEventListener('click', () => {
     switchInputTab('file');
 });
 
-// ==================== EXPORT (FIXED) ====================
+// ==================== EXPORT ====================
 async function exportDoc(mode, evt) {
     if (!window.docx) return showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
 
@@ -866,7 +858,7 @@ async function exportDoc(mode, evt) {
     if (btn) { origText = btn.textContent; btn.textContent = 'กำลังสร้าง...'; btn.disabled = true; }
 
     try {
-        // ✅ FIX: เพิ่ม ShadingType และ BorderStyle ใน destructure
+        // docx 9.x — destructure เหมือนเดิม ShadingType ถูกย้ายเข้า ShadingType enum
         const {
             Document, Packer, Paragraph, TextRun,
             Table, TableRow, TableCell,
@@ -874,8 +866,6 @@ async function exportDoc(mode, evt) {
             ShadingType, BorderStyle
         } = window.docx;
 
-        // ✅ FIX: ลบ bidirectional ออก (ไม่มีใน docx v8)
-        // ใช้ alignment แทนสำหรับข้อความไทย
         const createParagraph = (text, isEnglish = false, headingLevel = null) => {
             const opts = {
                 children: [
@@ -892,20 +882,18 @@ async function exportDoc(mode, evt) {
             return new Paragraph(opts);
         };
 
-        // แปลง text → array of Paragraph (แยกด้วย newline)
         const textToParagraphs = (text, isEnglish) =>
             text.split(/\n+/)
                 .map(p => p.trim())
                 .filter(Boolean)
                 .map(p => createParagraph(p, isEnglish));
 
-        // ✅ FIX: ใช้ WidthType.DXA และเพิ่ม ShadingType.CLEAR
         const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
         const cellBorders = {
             top: cellBorder, bottom: cellBorder,
             left: cellBorder, right: cellBorder
         };
-        const HALF_WIDTH = 4680; // A4 content = 9360 DXA, แบ่งครึ่ง
+        const HALF_WIDTH = 4680;
 
         let doc;
 
@@ -930,20 +918,17 @@ async function exportDoc(mode, evt) {
             });
 
         } else {
-            // mode === 'both' — ตารางเปรียบเทียบ
+            // mode === 'both'
             const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const thParas  = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const maxLen   = Math.max(srcParas.length, thParas.length);
 
-            // แถวหัวตาราง
             const headerRow = new TableRow({
                 tableHeader: true,
                 children: [
                     new TableCell({
                         borders: cellBorders,
-                        // ✅ FIX: WidthType.DXA แทน PERCENTAGE
                         width: { size: HALF_WIDTH, type: WidthType.DXA },
-                        // ✅ FIX: เพิ่ม type: ShadingType.CLEAR ป้องกัน background ดำ
                         shading: { fill: 'D6E4F7', type: ShadingType.CLEAR },
                         margins: { top: 80, bottom: 80, left: 120, right: 120 },
                         children: [createParagraph('English (ต้นฉบับ)', true, HeadingLevel.HEADING_3)]
@@ -958,7 +943,6 @@ async function exportDoc(mode, evt) {
                 ]
             });
 
-            // แถวเนื้อหา
             const dataRows = [];
             for (let i = 0; i < maxLen; i++) {
                 dataRows.push(new TableRow({
@@ -983,7 +967,6 @@ async function exportDoc(mode, evt) {
                 sections: [{
                     children: [
                         createParagraph('เปรียบเทียบต้นฉบับและคำแปล', false, HeadingLevel.HEADING_1),
-                        // ✅ FIX: WidthType.DXA + columnWidths
                         new Table({
                             width: { size: HALF_WIDTH * 2, type: WidthType.DXA },
                             columnWidths: [HALF_WIDTH, HALF_WIDTH],
@@ -1018,7 +1001,6 @@ function copyText(id) {
     if (!el) return;
     const text = el.textContent;
     if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) return showError('ยังไม่มีเนื้อหาให้คัดลอก');
-    // FIX 1: capture btn BEFORE async — global event is stale inside .then()
     const btn = (event && event.target && event.target.classList.contains('copy-btn')) ? event.target : null;
     navigator.clipboard.writeText(text).then(() => {
         if (btn) {
