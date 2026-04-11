@@ -348,43 +348,40 @@ const MODE_CONFIG = {
     NOVEL: {
         name: 'นิยาย/วรรณกรรม',
         desc: 'เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ',
-        temperature: 0.25, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
-        prompt: `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายและวรรณกรรมภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
-📋 กฎการแปล (ต้องปฏิบัติตามอย่างเคร่งครัด):
-1. [สไตล์] รักษาโทนเรื่อง: ทางการ/กึ่งทางการ/ภาษาพูด ตามบริบทต้นฉบับ
-2. [บทสนทนา] ใช้สรรพนามไทยเหมาะสมกับความสัมพันธ์ตัวละคร (ฉัน/คุณ/เขา/นาง/ท่าน ฯลฯ)
-3. [โครงสร้าง] รักษาการขึ้นย่อหน้าและจังหวะการเล่าเรื่อง ห้ามตัด/เพิ่มเนื้อหา
-4. [ชื่อเฉพาะ] ครั้งแรกที่ปรากฏให้ใช้ "ชื่อไทย (ชื่ออังกฤษ)" ครั้งถัดไปใช้ภาษาอังกฤษล้วน
-5. [รูปแบบ] ห้ามใช้ Markdown, อีโมจิ, สัญลักษณ์พิเศษ ใช้เฉพาะข้อความธรรมดาและวรรคตอนมาตรฐานไทย
-6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำอธิบายเพิ่มเติม
+        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
+        prompt: `You are a professional expert in translating English novels and literature into Thai.
 
-⚔️ ศัพท์แฟนตาซี/RPG/เกม (ทับศัพท์ ห้ามแปลตรงตัว):
-- สิ่งมีชีวิต/มอนสเตอร์: Golem → โกเลม, Dragon → มังกร, Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์
-- สถานที่: Dungeon → ดันเจี้ยน, Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร
-- ระบบเกม: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP → คงทับศัพท์, Magic → เวทมนตร์, Mana → มานา
-- คลาส/อาชีพ: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์
+Translation Rules (must be strictly followed):
 
-🔤 สำนวนและ Phrasal Verbs (แปลตามความหมาย ห้ามแปลคำต่อคำ):
-- "leave X alone" → ปล่อยให้ X อยู่ตามลำพัง, "go along with" → ยอมรับ/ทำตาม, "give up" → ยอมแพ้/เลิก
-- "make up" → แต่งเรื่อง/ชดเชย (ดูบริบท), "break down" → พังทลาย/ร้องไห้ (ดูบริบท)
-- "look into" → สืบสวน/ตรวจสอบ, "show up" → ปรากฏตัว, "run into" → เจอโดยบังเอิญ
+Style: Preserve the original tone—formal, semi-formal, or conversational—based on the source context.
+Dialogue: Use appropriate Thai pronouns according to character relationships (ฉัน, คุณ, เขา, นาง, ท่าน, etc.).
+Structure: Maintain paragraph breaks and narrative pacing. Do not omit or add content.
+Proper Names: On first occurrence, use “Thai name (English name)”; afterward, use English only.
+Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
+Output: Provide only the Thai translation. No additional explanations.
 
-🎭 การจัดการเนื้อหาพิเศษ:
-- บทสนทนา: ใช้เครื่องหมายคำพูดไทย "..." และแทรกคำกริยาบทพูดให้ธรรมชาติ
-- ความคิดตัวละคร: ใช้เครื่องหมายขีดกลาง — หรือเอียงตามความเหมาะสม`
-    },
-    ACADEMIC: {
-        name: 'วิชาการ/บทความ',
-        desc: 'เหมาะสำหรับบทความวิจัย เอกสารวิชาการ รายงาน เน้นความแม่นยำ ความเป็นทางการ และศัพท์เทคนิค',
-        temperature: 0.1, top_p: 0.85, frequency_penalty: 0.0, presence_penalty: 0.0,
-        prompt: `คุณคือผู้เชี่ยวชาญด้านการแปลเอกสารวิชาการ บทความวิจัย และงานเขียนเชิงวิชาการภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
-📋 กฎการแปล (ต้องปฏิบัติตามอย่างเคร่งครัด):
-1. [ความถูกต้อง] รักษาความหมายเชิงวิชาการอย่างแม่นยำ ห้ามตีความเพิ่มหรือลดทอนเนื้อหา
-2. [ระดับภาษา] ใช้ภาษาทางการเชิงวิชาการ เหมาะสมกับบริบทงานวิจัย/บทความ
-3. [ศัพท์เทคนิค] รักษาศัพท์เทคนิค/คำย่อภาษาอังกฤษไว้ หากจำเป็นต้องแปล ให้ใช้รูปแบบ "คำแปลไทย (ศัพท์อังกฤษ)"
-4. [โครงสร้าง] รักษาโครงสร้างย่อหน้า หัวข้อ และลำดับตรรกะของต้นฉบับอย่างเคร่งครัด
-5. [รูปแบบ] ห้ามใช้ Markdown, อีโมจิ, หรือสัญลักษณ์พิเศษ ใช้ข้อความธรรมดาและเครื่องหมายวรรคตอนมาตรฐาน
-6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำนำหน้าหรือคำอธิบาย`
+Fantasy/RPG/Game Terminology (transliteration only, do not translate literally):
+
+Creatures/Monsters: Golem → โกเลม, Dragon → มังกร, Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์
+Locations: Dungeon → ดันเจี้ยน, Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร
+Game Systems: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP → keep as is, Magic → เวทมนตร์, Mana → มานา
+Classes/Professions: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์
+
+Idioms and Phrasal Verbs (translate by meaning, not word-for-word):
+
+“leave X alone” → leave X alone
+“go along with” → agree/follow along
+“give up” → give up/quit
+“make up” → fabricate/make up for (depending on context)
+“break down” → collapse/break into tears (depending on context)
+“look into” → investigate
+“show up” → appear
+“run into” → run into/meet by chance
+
+Handling Special Content:
+
+Dialogue: Use Thai quotation marks “...” and include natural dialogue tags
+Character thoughts: Use dashes — or italics as appropriate`
     }
 };
 
@@ -872,18 +869,19 @@ async function runConsistencyCheck(btn) {
     // ส่ง sample: ต้น + กลาง + ท้าย รวม ~3000 chars
     const sample = buildConsistencySample(extractedText, translationText, 3000);
 
-    const prompt = `คุณคือผู้เชี่ยวชาญตรวจสอบคุณภาพงานแปล EN→TH
+    const prompt = `You are a quality assurance expert for English-to-Thai translations.
 
-ตรวจหาปัญหาเหล่านี้ในงานแปลที่ให้:
-1. ชื่อตัวละคร / สถานที่ที่แปลไม่สม่ำเสมอ (เช่น บางครั้ง "อาเรีย" บางครั้ง "อาร์เรีย")
-2. คำเฉพาะที่ควรทับศัพท์แต่ถูกแปลผิด
-3. ระดับภาษา/สรรพนามที่เปลี่ยนไปโดยไม่มีเหตุผล
-4. ประโยคที่ยังเป็นภาษาอังกฤษปนอยู่
+Check the given translation for the following issues:
 
-ตอบเป็น JSON อย่างเดียว ไม่มีข้อความอื่น รูปแบบ:
-{"issues": [{"type": "warn|ok", "term": "คำที่มีปัญหา", "detail": "รายละเอียด", "suggestion": "คำแนะนำ"}], "summary": "สรุปคุณภาพ 1 ประโยค"}
+Inconsistent rendering of character or place names (e.g., sometimes “Aria” vs. “Arria”).
+Terms that should be transliterated but were incorrectly translated.
+Inconsistent tone or pronoun usage without justification.
+Sentences that still contain English mixed in.
 
-ถ้าไม่พบปัญหา ให้ issues เป็น array ว่าง และ summary บอกว่าคุณภาพดี`;
+Respond in JSON only, with no additional text, using this format:
+{"issues": [{"type": "warn|ok", "term": "problematic term", "detail": "details", "suggestion": "recommendation"}], "summary": "one-sentence quality summary"}
+
+If no issues are found, return an empty issues array and a summary stating that the quality is good.`;
 
     try {
         const response = await fetch(API_URL, {
