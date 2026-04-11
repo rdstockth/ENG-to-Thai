@@ -356,7 +356,7 @@ main {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="translateIcon">
                         <path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
                     </svg>
-                    เริ่มแปล
+                    <span id="translateLabel">เริ่มแปล</span>
                 </button>
                 <button class="btn btn-secondary" id="resetBtn" style="display:none">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -500,7 +500,8 @@ function setMode(mode) {
     currentTranslationMode = mode;
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     document.getElementById('modeDesc').textContent = MODE_CONFIG[mode].desc;
-    document.getElementById('translateBtn').querySelector('svg').nextSibling.textContent = ` เริ่มแปล (${MODE_CONFIG[mode].name})`;
+    // FIX 4: use dedicated span instead of fragile nextSibling text node
+    document.getElementById('translateLabel').textContent = `เริ่มแปล (${MODE_CONFIG[mode].name})`;
 }
 
 function switchInputTab(tab) {
@@ -581,13 +582,29 @@ async function handleFile(file) {
             text = result.value.trim();
         } else {
             if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js library not loaded');
-            const pdf = await pdfjsLib.getDocument({  arrayBuffer }).promise;
+            const pdf = await pdfjsLib.getDocument({ arrayBuffer }).promise;
             const fullText = [];
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 loadingText.textContent = `กำลังอ่านหน้า ${pageNum} จาก ${pdf.numPages}...`;
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
-                fullText.push(textContent.items.map(item => item.str).join(' '));
+                // FIX 2: use Y-position + hasEOL to reconstruct paragraph structure
+                let pageLines = [];
+                let currentLine = '';
+                let prevY = null;
+                for (const item of textContent.items) {
+                    const curY = item.transform ? Math.round(item.transform[5]) : null;
+                    if (prevY !== null && curY !== null && Math.abs(curY - prevY) > 4) {
+                        if (currentLine.trim()) pageLines.push(currentLine.trim());
+                        currentLine = '';
+                    }
+                    currentLine += item.str;
+                    if (item.hasEOL) { if (currentLine.trim()) pageLines.push(currentLine.trim()); currentLine = ''; }
+                    prevY = curY;
+                }
+                if (currentLine.trim()) pageLines.push(currentLine.trim());
+                // Group lines into paragraphs (blank gap = new paragraph)
+                fullText.push(pageLines.join('\n').trim());
                 if (pageNum % 5 === 0) await sleep(50);
             }
             text = fullText.join('\n\n').trim();
@@ -647,7 +664,7 @@ function buildNovelChunks(paragraphs, maxWords) {
             if (subChunk.length > 0) chunks.push({ text: subChunk.join(' '), context: getChunkContext(chunks) });
         } else {
             if (currentWords + wordCount > maxWords && current.length > 0) {
-                if (isDialogueStart && !isDialogueEnd && i < paragraphs.length - 1) { current.push(para); currentWords += wordCount; continue; }
+                // FIX 3: always flush — dialogue bypass caused unbounded chunk growth
                 chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0;
             }
             current.push(para); currentWords += wordCount;
@@ -671,7 +688,6 @@ function validateTranslation(original, translated) {
     if (/[*#`>|\[\]{}()]/.test(translated) && !/[\(\)]/.test(translated.replace(/\([^)]+\)/g, ''))) issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
     
     const ratio = translated.length / Math.max(original.length, 1);
-    // Academic texts can be longer due to formal phrasing
     const maxRatio = currentTranslationMode === 'ACADEMIC' ? 3.0 : 2.5;
     if (ratio < 0.4 || ratio > maxRatio) issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
     
@@ -742,7 +758,10 @@ async function translateChunk(text, context = '', retries = 2) {
 
 // ==================== MAIN PROCESS ====================
 translateBtn.addEventListener('click', async () => {
-    if (!extractedText || paragraphs.length === 0) return;
+    if (!extractedText || paragraphs.length === 0) {
+        showError('กรุณาโหลดไฟล์หรือวางข้อความก่อนกดแปล');
+        return;
+    }
     translateBtn.disabled = true;
     resetBtn.style.display = 'none';
     document.getElementById('spinner').classList.add('visible');
@@ -832,45 +851,159 @@ resetBtn.addEventListener('click', () => {
     switchInputTab('file');
 });
 
-// ==================== EXPORT ====================
+// ==================== EXPORT (FIXED) ====================
 async function exportDoc(mode, evt) {
     if (!window.docx) return showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
+
     const sourceText = document.getElementById('sourceDisplay').textContent;
     const translationText = document.getElementById('translationDisplay').textContent;
     const baseName = (document.getElementById('fileName').textContent || 'document').replace(/\.[^.]+$/, '');
-    const btn = evt?.currentTarget;
+
+    const btn = evt && evt.currentTarget ? evt.currentTarget : (evt && evt.target ? evt.target : null);
     let origText = '';
     if (btn) { origText = btn.textContent; btn.textContent = 'กำลังสร้าง...'; btn.disabled = true; }
 
     try {
-        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel } = window.docx;
-        const createRun = (text, isBold = false, font = 'Sarabun', size = 24) => new TextRun({ text, bold: isBold, font, size });
-        const createParagraph = (text, font = 'Sarabun', heading = null) => {
-            const props = { children: [createRun(text, false, font)], spacing: { after: 240 }, bidirectional: font === 'Sarabun' };
-            if (heading) props.heading = heading;
-            return new Paragraph(props);
+        // ✅ FIX: เพิ่ม ShadingType และ BorderStyle ใน destructure
+        const {
+            Document, Packer, Paragraph, TextRun,
+            Table, TableRow, TableCell,
+            WidthType, HeadingLevel, AlignmentType,
+            ShadingType, BorderStyle
+        } = window.docx;
+
+        // ✅ FIX: ลบ bidirectional ออก (ไม่มีใน docx v8)
+        // ใช้ alignment แทนสำหรับข้อความไทย
+        const createParagraph = (text, isEnglish = false, headingLevel = null) => {
+            const opts = {
+                children: [
+                    new TextRun({
+                        text: text,
+                        font: isEnglish ? 'Calibri' : 'Sarabun',
+                        size: headingLevel ? 28 : 24,
+                        bold: !!headingLevel,
+                    })
+                ],
+                spacing: { after: 200 },
+            };
+            if (headingLevel) opts.heading = headingLevel;
+            return new Paragraph(opts);
         };
-        const textToParagraphs = (text, font) => text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => createParagraph(p, font));
+
+        // แปลง text → array of Paragraph (แยกด้วย newline)
+        const textToParagraphs = (text, isEnglish) =>
+            text.split(/\n+/)
+                .map(p => p.trim())
+                .filter(Boolean)
+                .map(p => createParagraph(p, isEnglish));
+
+        // ✅ FIX: ใช้ WidthType.DXA และเพิ่ม ShadingType.CLEAR
+        const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+        const cellBorders = {
+            top: cellBorder, bottom: cellBorder,
+            left: cellBorder, right: cellBorder
+        };
+        const HALF_WIDTH = 4680; // A4 content = 9360 DXA, แบ่งครึ่ง
 
         let doc;
+
         if (mode === 'source') {
-            doc = new Document({ sections: [{ children: [createParagraph('📖 ต้นฉบับภาษาอังกฤษ', 'Calibri', HeadingLevel.HEADING_1), ...textToParagraphs(sourceText, 'Calibri')] }] });
+            doc = new Document({
+                sections: [{
+                    children: [
+                        createParagraph('ต้นฉบับภาษาอังกฤษ', true, HeadingLevel.HEADING_1),
+                        ...textToParagraphs(sourceText, true)
+                    ]
+                }]
+            });
+
         } else if (mode === 'translation') {
-            doc = new Document({ sections: [{ children: [createParagraph('📚 คำแปลภาษาไทย', 'Sarabun', HeadingLevel.HEADING_1), ...textToParagraphs(translationText, 'Sarabun')] }] });
+            doc = new Document({
+                sections: [{
+                    children: [
+                        createParagraph('คำแปลภาษาไทย', false, HeadingLevel.HEADING_1),
+                        ...textToParagraphs(translationText, false)
+                    ]
+                }]
+            });
+
         } else {
+            // mode === 'both' — ตารางเปรียบเทียบ
             const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
-            const thParas = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
-            const maxLen = Math.max(srcParas.length, thParas.length);
-            const tableRows = [new TableRow({ children: [new TableCell({ children: [createParagraph('🇬🇧 English', 'Calibri', HeadingLevel.HEADING_3)], width: { size: 50, type: WidthType.PERCENTAGE }, shading: { fill: 'E8F0FE' } }), new TableCell({ children: [createParagraph('🇹🇭 ภาษาไทย', 'Sarabun', HeadingLevel.HEADING_3)], width: { size: 50, type: WidthType.PERCENTAGE }, shading: { fill: 'FEF3E8' } })] })];
-            for (let i = 0; i < maxLen; i++) tableRows.push(new TableRow({ children: [new TableCell({ children: [createParagraph(srcParas[i] || '', 'Calibri')], width: { size: 50, type: WidthType.PERCENTAGE } }), new TableCell({ children: [createParagraph(thParas[i] || '', 'Sarabun')], width: { size: 50, type: WidthType.PERCENTAGE } })] }));
-            doc = new Document({ sections: [{ children: [createParagraph('📚 เปรียบเทียบต้นฉบับและคำแปล', 'Sarabun', HeadingLevel.HEADING_1), new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: { top: { style: 'single', size: 1 }, bottom: { style: 'single', size: 1 }, left: { style: 'single', size: 1 }, right: { style: 'single', size: 1 }, insideHorizontal: { style: 'single', size: 1 }, insideVertical: { style: 'single', size: 1 } } })] }] });
+            const thParas  = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+            const maxLen   = Math.max(srcParas.length, thParas.length);
+
+            // แถวหัวตาราง
+            const headerRow = new TableRow({
+                tableHeader: true,
+                children: [
+                    new TableCell({
+                        borders: cellBorders,
+                        // ✅ FIX: WidthType.DXA แทน PERCENTAGE
+                        width: { size: HALF_WIDTH, type: WidthType.DXA },
+                        // ✅ FIX: เพิ่ม type: ShadingType.CLEAR ป้องกัน background ดำ
+                        shading: { fill: 'D6E4F7', type: ShadingType.CLEAR },
+                        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                        children: [createParagraph('English (ต้นฉบับ)', true, HeadingLevel.HEADING_3)]
+                    }),
+                    new TableCell({
+                        borders: cellBorders,
+                        width: { size: HALF_WIDTH, type: WidthType.DXA },
+                        shading: { fill: 'FEF0E6', type: ShadingType.CLEAR },
+                        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                        children: [createParagraph('ภาษาไทย (คำแปล)', false, HeadingLevel.HEADING_3)]
+                    })
+                ]
+            });
+
+            // แถวเนื้อหา
+            const dataRows = [];
+            for (let i = 0; i < maxLen; i++) {
+                dataRows.push(new TableRow({
+                    children: [
+                        new TableCell({
+                            borders: cellBorders,
+                            width: { size: HALF_WIDTH, type: WidthType.DXA },
+                            margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                            children: [createParagraph(srcParas[i] || '', true)]
+                        }),
+                        new TableCell({
+                            borders: cellBorders,
+                            width: { size: HALF_WIDTH, type: WidthType.DXA },
+                            margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                            children: [createParagraph(thParas[i] || '', false)]
+                        })
+                    ]
+                }));
+            }
+
+            doc = new Document({
+                sections: [{
+                    children: [
+                        createParagraph('เปรียบเทียบต้นฉบับและคำแปล', false, HeadingLevel.HEADING_1),
+                        // ✅ FIX: WidthType.DXA + columnWidths
+                        new Table({
+                            width: { size: HALF_WIDTH * 2, type: WidthType.DXA },
+                            columnWidths: [HALF_WIDTH, HALF_WIDTH],
+                            rows: [headerRow, ...dataRows]
+                        })
+                    ]
+                }]
+            });
         }
 
         const blob = await Packer.toBlob(doc);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `${baseName}_${mode}.docx`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `${baseName}_${mode}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
     } catch (err) {
+        console.error('Export error:', err);
         showError('เกิดข้อผิดพลาดขณะสร้างไฟล์: ' + err.message);
     } finally {
         if (btn) { btn.textContent = origText; btn.disabled = false; }
@@ -883,9 +1016,10 @@ function copyText(id) {
     if (!el) return;
     const text = el.textContent;
     if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) return showError('ยังไม่มีเนื้อหาให้คัดลอก');
+    // FIX 1: capture btn BEFORE async — global event is stale inside .then()
+    const btn = (event && event.target && event.target.classList.contains('copy-btn')) ? event.target : null;
     navigator.clipboard.writeText(text).then(() => {
-        const btn = event?.target;
-        if (btn && btn.classList.contains('copy-btn')) {
+        if (btn) {
             const orig = btn.textContent; btn.textContent = '✓ คัดลอกแล้ว'; btn.style.color = 'var(--success)';
             setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
         }
