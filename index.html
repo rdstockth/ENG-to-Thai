@@ -427,13 +427,40 @@ const MODE_CONFIG = {
 4. [ชื่อเฉพาะ] ครั้งแรกที่ปรากฏให้ใช้ "ชื่อไทย (ชื่ออังกฤษ)" ครั้งถัดไปใช้ภาษาอังกฤษล้วน
 5. [รูปแบบ] ห้ามใช้ Markdown, อีโมจิ, สัญลักษณ์พิเศษ ใช้เฉพาะข้อความธรรมดาและวรรคตอนมาตรฐานไทย
 6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำอธิบายเพิ่มเติม
+
+⚔️ ศัพท์แฟนตาซี/RPG/เกม (ทับศัพท์ ห้ามแปลตรงตัว):
+- สิ่งมีชีวิต/มอนสเตอร์: Golem → โกเลม, Dragon → มังกร (ยกเว้นชื่อเฉพาะ), Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์
+- สถานที่: Dungeon → ดันเจี้ยน (ไม่ใช่ถ้ำหรือคุก เว้นแต่บริบทชัดเจน), Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร
+- ระบบเกม: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP → คงทับศัพท์, Status → สเตตัส, Magic → เวทมนตร์, Mana → มานา, Stamina → พลังงาน/สแตมิน่า
+- อาวุธ/ไอเทม: ใช้ทับศัพท์หากเป็นชื่อเฉพาะ เช่น Excalibur → เอ็กซ์แคลิเบอร์; คำทั่วไปเช่น Sword → ดาบ, Shield → โล่, Staff → คทา/ไม้เท้า
+- คลาส/อาชีพ: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก/นักลอบเร้น, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์
+
+🔤 สำนวนและ Phrasal Verbs (แปลตามความหมาย ห้ามแปลคำต่อคำ):
+- "leave X alone" → ปล่อยให้ X อยู่ตามลำพัง / ไม่เข้าไปยุ่งเกี่ยวกับ X (ไม่ใช่ "ปล่อย X คนเดียว")
+- "go along with" → ยอมรับ / เห็นด้วย / ทำตาม
+- "give up" → ยอมแพ้ / เลิก / หยุด
+- "make up" → แต่งเรื่อง / ชดเชย / แต่งหน้า (ดูบริบท)
+- "break down" → พังทลาย / สลาย / ร้องไห้ (ดูบริบท)
+- "look into" → สืบสวน / ตรวจสอบ
+- "get away" → หลบหนี / หนีออกไป (ดูบริบท)
+- "come across" → พบเจอโดยบังเอิญ
+- "run into" → เจอโดยบังเอิญ / ชน
+- "hold on" → รอก่อน / อดทน (ดูบริบท)
+- "take on" → รับมือ / รับงาน / เผชิญ
+- "show up" → ปรากฏตัว / มาถึง
+- สำนวนเปรียบเปรย เช่น "bite the bullet" → กัดฟันทน, "kick the bucket" → ตาย, "spill the beans" → เปิดเผยความลับ ให้แปลตามความหมายเชิงสำนวน ไม่แปลคำต่อคำ
+
 🎭 การจัดการเนื้อหาพิเศษ:
 - บทสนทนา: ใช้เครื่องหมายคำพูดไทย "..." และแทรกคำกริยาบทพูดให้ธรรมชาติ
 - ความคิดตัวละคร: ใช้เครื่องหมายขีดกลาง — หรือเอียงตามความเหมาะสม
 - บทกวี/คำคล้องจอง: ถ่ายทอดอารมณ์และจังหวะด้วยภาษาไทยที่สละสลวย
+
 ✅ ตัวอย่าง:
 ต้นฉบับ: "I can't believe it," Harry whispered, staring at the castle.
-คำแปล: "ฉันไม่เชื่อเลย" แฮร์รี่กระซิบ พลางจ้องมองปราสาทนั้น`
+คำแปล: "ฉันไม่เชื่อเลย" แฮร์รี่กระซิบ พลางจ้องมองปราสาทนั้น
+
+ต้นฉบับ: He lost two golems exploring the dungeon and decided to leave it alone for now.
+คำแปล: เขาเสียโกเลมไปสองตัวจากการสำรวจดันเจี้ยน และตัดสินใจไม่เข้าไปยุ่งเกี่ยวกับที่นั่นในตอนนี้`
     },
     ACADEMIC: {
         name: 'วิชาการ/บทความ',
@@ -858,7 +885,6 @@ async function exportDoc(mode, evt) {
     if (btn) { origText = btn.textContent; btn.textContent = 'กำลังสร้าง...'; btn.disabled = true; }
 
     try {
-        // docx 9.x — destructure เหมือนเดิม ShadingType ถูกย้ายเข้า ShadingType enum
         const {
             Document, Packer, Paragraph, TextRun,
             Table, TableRow, TableCell,
@@ -918,7 +944,6 @@ async function exportDoc(mode, evt) {
             });
 
         } else {
-            // mode === 'both'
             const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const thParas  = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const maxLen   = Math.max(srcParas.length, thParas.length);
