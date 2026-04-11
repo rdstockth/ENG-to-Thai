@@ -132,6 +132,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
 .glossary-import-wrap { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .glossary-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; color: var(--text-muted); }
 .glossary-arrow { color: var(--text-subtle); font-size: 11px; }
+
+/* ==================== CONSISTENCY PANEL ==================== */
+.consistency-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: none; }
+.consistency-panel.visible { display: block; }
+.consistency-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(196,98,45,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+.issue-row { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.issue-row:last-child { border-bottom: none; }
+.issue-badge { flex-shrink: 0; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-top: 2px; }
+.badge-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border); }
+.badge-ok { background: var(--success-bg); color: var(--success); border: 1px solid #b8ddc7; }
+.issue-text { flex: 1; color: var(--text); line-height: 1.6; }
+.issue-suggestion { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -297,9 +309,24 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
                     <button class="copy-btn" onclick="copyText('translationDisplay', this)">คัดลอก</button>
                     <button class="copy-btn" onclick="exportDoc('translation', event)">⬇ .docx</button>
                     <button class="copy-btn" onclick="exportDoc('both', event)" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button>
+                    <button class="copy-btn" id="consistencyBtn" onclick="runConsistencyCheck(this)" style="display:none;background:#f0f4ff;color:#1a56c4;border-color:#c5d5f5">🔍 ตรวจ Consistency</button>
                 </div>
             </div>
             <div class="panel-body"><div class="translation-content" id="translationDisplay"><div class="empty-state"><div class="empty-icon">📚</div>คำแปลจะปรากฏที่นี่</div></div></div>
+        </div>
+    </div>
+
+    <!-- ==================== CONSISTENCY CHECK PANEL ==================== -->
+    <div class="consistency-panel" id="consistencyPanel">
+        <div class="panel-header">
+            <span class="panel-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                ผลตรวจสอบ Consistency
+            </span>
+            <button class="copy-btn" onclick="document.getElementById('consistencyPanel').classList.remove('visible')">ปิด</button>
+        </div>
+        <div class="panel-body">
+            <div id="consistencyResult" style="min-height:60px"></div>
         </div>
     </div>
 </main>
@@ -365,7 +392,8 @@ const MODE_CONFIG = {
 let extractedText = '';
 let paragraphs = [];
 let translatedParts = [];
-let lastTranslatedContext = '';
+let lastTranslatedContext = '';  // TH text of last chunk
+let lastChunkENContext = '';      // EN text of last chunk (for bilingual context)
 let currentInputMode = 'file';
 let currentTranslationMode = 'NOVEL';
 let isLibrariesReady = false;
@@ -720,14 +748,62 @@ function validateTranslation(original, translated) {
     return { valid: issues.length === 0, issues };
 }
 
+// ==================== TYPOGRAPHY CLEANUP (#6) ====================
+function cleanThaiTypography(text) {
+    // ลบ space ก่อนเครื่องหมายวรรคตอน
+    text = text.replace(/ +([ๆฯ,!?])/g, '$1');
+    // ลบ space ในวงเล็บ/เครื่องหมายคำพูด
+    text = text.replace(/"[ \t]+/g, '"').replace(/[ \t]+"/g, '"');
+    text = text.replace(/\([ \t]+/g, '(').replace(/[ \t]+\)/g, ')');
+    // English ... → … (Thai style) แต่เก็บ ... ถ้าตามด้วย space = pause
+    text = text.replace(/\.{3,}/g, '...');
+    // Non-breaking space ระหว่างตัวเลขกับหน่วยภาษาไทย
+    const thaiUnits = 'กิโลเมตร|เมตร|เซนติเมตร|กิโลกรัม|กรัม|ลิตร|มิลลิลิตร|นาที|ชั่วโมง|วัน|สัปดาห์|เดือน|ปี|บาท|สตางค์';
+    text = text.replace(new RegExp(`(\\d)\\s+(${thaiUnits})`, 'g'), '$1\u00A0$2');
+    // ลบ space ท้ายบรรทัด
+    text = text.replace(/[ \t]+$/gm, '');
+    // ลด newline เกิน
+    text = text.replace(/\n{3,}/g, '\n\n');
+    // ลบ space ซ้ำ (ยกเว้น newline)
+    text = text.replace(/[ \t]{2,}/g, ' ');
+    return text.trim();
+}
+
+// ==================== OVERLAP HELPER (#4) ====================
+// ดึง N คำสุดท้ายของ EN chunk ก่อนหน้า เพื่อใช้เป็น overlap context
+function getOverlapWords(text, wordCount = 50) {
+    if (!text) return '';
+    const words = text.trim().split(/\s+/);
+    if (words.length <= wordCount) return text.trim();
+    // ตัดที่ขอบประโยค ไม่ตัดกลาง
+    const tail = words.slice(-wordCount).join(' ');
+    const sentenceStart = tail.search(/(?<=[.!?]\s)\S/);
+    return sentenceStart > 0 ? tail.slice(sentenceStart) : tail;
+}
+
 // ==================== API TRANSLATION ====================
-async function translateChunk(text, context = '', retries = 2) {
+// context: { enTail, thTail, overlapEN }
+async function translateChunk(text, context = {}, retries = 2) {
     const config = MODE_CONFIG[currentTranslationMode];
-    // Inject glossary into system prompt every call
     const systemPrompt = config.prompt + buildGlossaryPromptBlock();
-    const userPrompt = context
-        ? `บริบทก่อนหน้า:\n${context}\n\n---\n\nข้อความต่อไปที่ต้องแปล:\n${text}`
-        : `ข้อความที่ต้องแปล:\n${text}`;
+
+    // สร้าง user prompt แบบ bilingual context (#1) + overlap (#4)
+    const parts = [];
+    if (context.enTail || context.thTail) {
+        parts.push('📌 บริบทก่อนหน้า (EN+TH) — ใช้รักษาความต่อเนื่อง ห้ามแปลซ้ำ:');
+        if (context.enTail) parts.push(`[EN]: ${context.enTail}`);
+        if (context.thTail) parts.push(`[TH]: ${context.thTail}`);
+        parts.push('');
+    }
+    if (context.overlapEN) {
+        parts.push('🔗 ประโยคสุดท้ายของ chunk ก่อน (context เท่านั้น ห้ามแปลซ้ำ):');
+        parts.push(context.overlapEN);
+        parts.push('');
+    }
+    parts.push('---');
+    parts.push('ข้อความที่ต้องแปล:');
+    parts.push(text);
+    const userPrompt = parts.join('\n');
 
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
@@ -746,7 +822,6 @@ async function translateChunk(text, context = '', retries = 2) {
             });
 
             if (!response.ok) {
-                const errText = await response.text().catch(() => '');
                 if (attempt < retries) { await sleep(RETRY_DELAY * (attempt + 1)); continue; }
                 throw new Error(`API error: HTTP ${response.status}`);
             }
@@ -761,7 +836,8 @@ async function translateChunk(text, context = '', retries = 2) {
                 throw new Error('Empty response from API');
             }
 
-            const result = content.trim();
+            // apply typography cleanup (#6) ก่อน validate
+            const result = cleanThaiTypography(content.trim());
             const validation = validateTranslation(text, result);
             if (!validation.valid && attempt < retries) {
                 if (validation.issues.includes('ไม่พบข้อความภาษาไทย')) { await sleep(RETRY_DELAY); continue; }
@@ -776,6 +852,103 @@ async function translateChunk(text, context = '', retries = 2) {
         }
     }
     throw new Error('Translation failed after all retries');
+}
+
+// ==================== CONSISTENCY CHECK (#3) ====================
+async function runConsistencyCheck(btn) {
+    const translationText = document.getElementById('translationDisplay').textContent;
+    if (!translationText || translationText.includes('คำแปลจะปรากฏที่นี่')) return showError('ยังไม่มีคำแปลให้ตรวจสอบ');
+
+    const panel = document.getElementById('consistencyPanel');
+    const result = document.getElementById('consistencyResult');
+    panel.classList.add('visible');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="consistency-spinner"></span>กำลังตรวจสอบ...';
+    result.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">กำลังวิเคราะห์งานแปล...</div>';
+
+    // ส่ง sample: ต้น + กลาง + ท้าย รวม ~3000 chars
+    const sample = buildConsistencySample(extractedText, translationText, 3000);
+
+    const prompt = `คุณคือผู้เชี่ยวชาญตรวจสอบคุณภาพงานแปล EN→TH
+
+ตรวจหาปัญหาเหล่านี้ในงานแปลที่ให้:
+1. ชื่อตัวละคร / สถานที่ที่แปลไม่สม่ำเสมอ (เช่น บางครั้ง "อาเรีย" บางครั้ง "อาร์เรีย")
+2. คำเฉพาะที่ควรทับศัพท์แต่ถูกแปลผิด
+3. ระดับภาษา/สรรพนามที่เปลี่ยนไปโดยไม่มีเหตุผล
+4. ประโยคที่ยังเป็นภาษาอังกฤษปนอยู่
+
+ตอบเป็น JSON อย่างเดียว ไม่มีข้อความอื่น รูปแบบ:
+{"issues": [{"type": "warn|ok", "term": "คำที่มีปัญหา", "detail": "รายละเอียด", "suggestion": "คำแนะนำ"}], "summary": "สรุปคุณภาพ 1 ประโยค"}
+
+ถ้าไม่พบปัญหา ให้ issues เป็น array ว่าง และ summary บอกว่าคุณภาพดี`;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                max_tokens: 1000,
+                temperature: 0.1,
+                messages: [
+                    { role: 'system', content: prompt },
+                    { role: 'user', content: sample }
+                ]
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = JSON.parse(await response.text());
+        const raw = data.choices?.[0]?.message?.content || '';
+        const cleaned = raw.replace(/```json|```/g, '').trim();
+        let parsed;
+        try { parsed = JSON.parse(cleaned); } catch(e) { throw new Error('รูปแบบผลลัพธ์ไม่ถูกต้อง'); }
+
+        renderConsistencyResult(parsed);
+    } catch(err) {
+        result.innerHTML = `<div style="color:var(--error);font-size:14px">❌ ตรวจสอบไม่สำเร็จ: ${err.message}</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = origText;
+    }
+}
+
+function buildConsistencySample(enText, thText, maxChars) {
+    const third = Math.floor(maxChars / 3);
+    const enSample = enText.slice(0, third) + (enText.length > third * 2 ? '\n\n[...]\n\n' + enText.slice(-Math.floor(third / 2)) : '');
+    const thSample = thText.slice(0, third) + (thText.length > third * 2 ? '\n\n[...]\n\n' + thText.slice(-Math.floor(third / 2)) : '');
+    return `[ต้นฉบับ EN]:\n${enSample}\n\n[คำแปล TH]:\n${thSample}`;
+}
+
+function renderConsistencyResult(data) {
+    const result = document.getElementById('consistencyResult');
+    const issues = data.issues || [];
+    const summary = data.summary || '';
+
+    let html = '';
+    if (summary) {
+        html += `<div style="font-size:14px;color:var(--text-muted);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">${summary}</div>`;
+    }
+
+    if (issues.length === 0) {
+        html += `<div style="display:flex;align-items:center;gap:0.5rem;color:var(--success);font-size:14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            ไม่พบปัญหา Consistency ในงานแปลนี้
+        </div>`;
+    } else {
+        issues.forEach(issue => {
+            html += `<div class="issue-row">
+                <span class="issue-badge ${issue.type === 'warn' ? 'badge-warn' : 'badge-ok'}">${issue.type === 'warn' ? '⚠ ตรวจสอบ' : '✓ OK'}</span>
+                <div>
+                    <div class="issue-text"><strong>${escHtml(issue.term || '')}</strong> — ${escHtml(issue.detail || '')}</div>
+                    ${issue.suggestion ? `<div class="issue-suggestion">💡 ${escHtml(issue.suggestion)}</div>` : ''}
+                </div>
+            </div>`;
+        });
+    }
+    result.innerHTML = html;
 }
 
 // ==================== MAIN PROCESS ====================
@@ -805,6 +978,7 @@ async function runTranslation(startFromIndex = 0) {
     }
 
     lastTranslatedContext = translatedParts.length > 0 ? translatedParts[translatedParts.length - 1] : '';
+    lastChunkENContext = '';
     chunkTimings = [];
     let successCount = startFromIndex;
 
@@ -818,34 +992,39 @@ async function runTranslation(startFromIndex = 0) {
 
             if (i > startFromIndex) await sleep(RATE_LIMIT_DELAY);
 
-            const prevContext = lastTranslatedContext ? getTrailingContext(lastTranslatedContext) : '';
+            // #1: bilingual context — EN tail + TH tail ของ chunk ก่อนหน้า
+            // #4: overlap — 50 คำสุดท้ายของ EN chunk ก่อนหน้า (context hint ไม่แปลซ้ำ)
+            const ctx = {};
+            if (lastChunkENContext) {
+                ctx.enTail = getTrailingContext(lastChunkENContext, 300);
+                ctx.thTail = getTrailingContext(lastTranslatedContext, 300);
+                ctx.overlapEN = getOverlapWords(lastChunkENContext, 50);
+            }
 
             let translated;
             try {
-                translated = await translateChunk(chunks[i].text, prevContext);
+                translated = await translateChunk(chunks[i].text, ctx);
             } catch(chunkErr) {
-                // === PARTIAL FAILURE: save checkpoint then surface error ===
                 saveCheckpoint(currentJobId, chunks, i, translatedParts, currentTranslationMode);
                 const partialText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
                 if (partialText) document.getElementById('translationDisplay').textContent = partialText;
                 progressStatus.textContent = `⚠️ หยุดที่ chunk ${i + 1} — บันทึกแล้ว ${successCount} chunk`;
                 progressStatus.style.color = 'var(--warn)';
                 progressEta.textContent = '';
-                showError(`แปลล้มเหลวที่ chunk ${i + 1}/${chunks.length}: ${chunkErr.message} — กดรีเฟรชหน้าเพื่อแปลต่อจากจุดนี้`);
-                throw chunkErr; // bubble to finally
+                showError(`แปลล้มเหลวที่ chunk ${i + 1}/${chunks.length}: ${chunkErr.message} — กดรีเฟรชเพื่อแปลต่อจากจุดนี้`);
+                throw chunkErr;
             }
 
             translatedParts.push(translated);
             lastTranslatedContext = translated;
+            lastChunkENContext = chunks[i].text;  // เก็บ EN ของ chunk นี้ไว้ให้ chunk ถัดไป
             successCount++;
 
-            // Record timing for ETA
             chunkTimings.push(Date.now() - chunkStart);
             const avgTime = chunkTimings.reduce((a, b) => a + b, 0) / chunkTimings.length;
             const remaining = (chunks.length - i - 1) * avgTime;
             if (remaining > 0) progressEta.textContent = formatEta(remaining);
 
-            // Autosave checkpoint every 3 chunks
             if ((i + 1) % 3 === 0) {
                 saveCheckpoint(currentJobId, chunks, i + 1, translatedParts, currentTranslationMode);
             }
@@ -864,7 +1043,8 @@ async function runTranslation(startFromIndex = 0) {
         if (successCount === chunks.length) {
             progressStatus.textContent = `✅ แปลเสร็จสมบูรณ์ ${translatedParts.length} chunk`;
             progressStatus.style.color = 'var(--success)';
-            clearCheckpoint(currentJobId); // job done, clear checkpoint
+            clearCheckpoint(currentJobId);
+            document.getElementById('consistencyBtn').style.display = 'inline-block';
         } else {
             progressStatus.textContent = `⚠️ แปลเสร็จ ${successCount} จาก ${chunks.length} chunk`;
             progressStatus.style.color = 'var(--accent)';
@@ -890,7 +1070,7 @@ translateBtn.addEventListener('click', async () => {
 // ==================== RESET ====================
 resetBtn.addEventListener('click', () => {
     if (currentJobId) clearCheckpoint(currentJobId);
-    extractedText = ''; paragraphs = []; translatedParts = []; lastTranslatedContext = ''; currentJobId = null; chunkTimings = [];
+    extractedText = ''; paragraphs = []; translatedParts = []; lastTranslatedContext = ''; lastChunkENContext = ''; currentJobId = null; chunkTimings = [];
     document.getElementById('fileChip').style.display = 'none';
     document.getElementById('fileName').textContent = '—';
     document.getElementById('sourcePanel').style.display = 'none';
@@ -898,6 +1078,8 @@ resetBtn.addEventListener('click', () => {
     document.getElementById('progressWrap').classList.remove('visible');
     document.getElementById('progressStatus').style.color = '';
     document.getElementById('resultGrid').style.display = 'none';
+    document.getElementById('consistencyPanel').classList.remove('visible');
+    document.getElementById('consistencyBtn').style.display = 'none';
     document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div>คำแปลจะปรากฏที่นี่</div>';
     document.getElementById('resumeBanner').classList.remove('visible');
     fileInput.value = ''; textInput.value = ''; updateTextCharCount();
