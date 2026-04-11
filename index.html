@@ -133,6 +133,24 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
 .glossary-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; color: var(--text-muted); }
 .glossary-arrow { color: var(--text-subtle); font-size: 11px; }
 
+/* ==================== GENRE SELECTOR ==================== */
+.genre-row { display: none; flex-direction: column; gap: 0.4rem; }
+.genre-row.visible { display: flex; }
+.genre-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-subtle); padding-left: 2px; }
+.genre-selector { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.genre-btn {
+    padding: 0.45rem 1rem; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--text-muted); border: 1px solid var(--border); background: var(--surface);
+    transition: all 0.15s; display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+}
+.genre-btn:hover { color: var(--text); background: var(--surface2); border-color: #c8b9a5; }
+.genre-btn.active { color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-color: transparent; }
+.genre-btn[data-genre="FANTASY"].active    { background: #5b4fcf; }
+.genre-btn[data-genre="ROMANCE"].active    { background: #c2436a; }
+.genre-btn[data-genre="ACTION"].active     { background: #c44a1a; }
+.genre-btn[data-genre="SPORTS"].active     { background: #1a7a3a; }
+.genre-desc { font-size: 12px; color: var(--text-subtle); padding-left: 2px; min-height: 18px; }
+
 /* ==================== CONSISTENCY PANEL ==================== */
 .consistency-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: none; }
 .consistency-panel.visible { display: block; }
@@ -171,6 +189,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
         <button class="mode-btn" data-mode="ACADEMIC" onclick="setMode('ACADEMIC')">📄 วิชาการ/บทความ</button>
     </div>
     <div class="mode-desc" id="modeDesc">เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ</div>
+
+    <!-- ==================== GENRE SELECTOR ==================== -->
+    <div class="genre-row visible" id="genreRow">
+        <span class="genre-label">แนวนิยาย</span>
+        <div class="genre-selector">
+            <button class="genre-btn active" data-genre="FANTASY" onclick="setGenre('FANTASY')">⚔️ แฟนตาซี / ผจญภัย</button>
+            <button class="genre-btn" data-genre="ROMANCE" onclick="setGenre('ROMANCE')">💕 โรแมนติก / ดราม่า</button>
+            <button class="genre-btn" data-genre="ACTION" onclick="setGenre('ACTION')">🥊 แอ็กชัน / ต่อสู้</button>
+            <button class="genre-btn" data-genre="SPORTS" onclick="setGenre('SPORTS')">🏆 กีฬา</button>
+        </div>
+        <span class="genre-desc" id="genreDesc">นิยายแฟนตาซี isekai RPG เวทมนตร์ การผจญภัย เน้นคำศัพท์เกม/RPG และบรรยากาศโลกแฟนตาซี</span>
+    </div>
 
     <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept=".docx,.pdf" />
@@ -344,31 +374,8 @@ const RETRY_DELAY = 1500;
 const RATE_LIMIT_DELAY = 800;
 const CHECKPOINT_KEY_PREFIX = 'translator_checkpoint_';
 
-const MODE_CONFIG = {
-    NOVEL: {
-        name: 'นิยาย/วรรณกรรม',
-        desc: 'เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ',
-        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
-        prompt: `You are a professional expert in translating English novels and literature into Thai.
-
-Translation Rules (must be strictly followed):
-
-Style: Preserve the original tone—formal, semi-formal, or conversational—based on the source context.
-Dialogue: Use appropriate Thai pronouns according to character relationships (ฉัน, คุณ, เขา, นาง, ท่าน, etc.).
-Structure: Maintain paragraph breaks and narrative pacing. Do not omit or add content.
-Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only.
-Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
-Output: Provide only the Thai translation. No additional explanations.
-
-Fantasy/RPG/Game Terminology (transliteration only, do not translate literally):
-
-Creatures/Monsters: Golem → โกเลม, Dragon → มังกร, Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์, Beastman → บีสต์แมน/มนุษย์ครึ่งสัตว์, Spirit → ภูต/จิตวิญญาณ, Fairy → แฟรี่/ภูตจิ๋ว, Lich → ลิช, Wyvern → ไวเวิร์น, Minotaur → มิโนทอร์, Mermaid/Siren → นางเงือก/ไซเรน, Homunculus → โฮมุนคุลุส/มนุษย์เทียม, Familiar → แฟมิเลียร์/สัตว์เลี้ยงเวทมนตร์, Mutant → มิวแทนต์/สัตว์กลายพันธุ์
-Locations: Dungeon → ดันเจี้ยน, Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร, Labyrinth → เขาวงกต, Sanctuary → สถานศักดิ์สิทธิ์, Ruins → ซากโบราณสถาน, Capital → เมืองหลวง, Empire → จักรวรรดิ, Frontier → ชายแดน/พรมแดน, Abyss → ขุมนรก/อะบิส, Territory → อาณาเขต/ดินแดน
-Game Systems: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP/AGI/STR/INT/DEX → keep as is, Magic → เวทมนตร์, Mana → มานา, Status Window → หน้าต่างสถานะ/สเตตัส, Inventory → ช่องเก็บของ/อินเวนทอรี, Title → ฉายา, Drop → ดรอป/ไอเทมดรอป, Potion → โพชั่น/น้ำยาฟื้นฟู, Equipment → อุปกรณ์สวมใส่/ยุทโธปกรณ์, Durability → ค่าความทนทาน, Buff/Debuff → บัฟ/ดีบัฟ
-Classes/Professions: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์, Swordsman → นักดาบ, Cleric → นักบวช/เคลริค, Assassin → นักฆ่า/แอสซาซิน, Necromancer → เนโครแมนเซอร์/ผู้ใช้เวทมนตร์ดำ, Alchemist → นักเล่นแร่แปรธาตุ, Blacksmith → ช่างตีเหล็ก, Merchant → พ่อค้า, Summoner → ผู้อัญเชิญ/ซัมมอนเนอร์
-Ranks/Titles: Rank S/A/B/C/D/E/F → แรงก์ S/A/B/C/D/E/F, Hero → ผู้กล้า, Demon Lord → จอมมาร, Guild Master → กิลด์มาสเตอร์/หัวหน้ากิลด์, Noble → ขุนนาง, Duke/Marquis/Count/Viscount/Baron → ดยุก/มาร์ควิส/เคานต์/ไวเคานต์/บารอน, Commoner → สามัญชน
-Magic/Elements: Spell → คาถา/บทเวท, Incantation → คำร่าย, Magic Circle → วงเวท/วงแหวนเวทมนตร์, Attribute/Element → ธาตุ, Light/Dark → ธาตุแสง/ธาตุความมืด
-
+// ==================== SHARED IDIOMS BLOCK ====================
+const SHARED_IDIOMS = `
 Idioms and Phrasal Verbs (translate by meaning, not word-for-word):
 
 "leave X alone" → ปล่อย X ไว้ / อย่าไปยุ่งกับ X
@@ -410,7 +417,166 @@ Idioms and Phrasal Verbs (translate by meaning, not word-for-word):
 Handling Special Content:
 
 Dialogue: Use Thai quotation marks "..." and include natural dialogue tags
-Character thoughts: Use dashes — or italics as appropriate`
+Character thoughts: Use dashes — or italics as appropriate`;
+
+// ==================== GENRE CONFIG ====================
+const GENRE_CONFIG = {
+    FANTASY: {
+        name: '⚔️ แฟนตาซี / ผจญภัย',
+        desc: 'นิยายแฟนตาซี isekai RPG เวทมนตร์ การผจญภัย เน้นคำศัพท์เกม/RPG และบรรยากาศโลกแฟนตาซี',
+        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
+        prompt: `You are a professional expert in translating English fantasy and adventure novels into Thai.
+
+Translation Rules (must be strictly followed):
+
+Style: Preserve the original tone—epic, dramatic, or conversational—based on the source context. Fantasy narration should feel grand and immersive.
+Dialogue: Use appropriate Thai pronouns according to character relationships and social rank (ฉัน, ข้า, เจ้า, ท่าน, etc.). Nobles and royalty use formal pronouns; adventurers may use casual ones.
+Structure: Maintain paragraph breaks and narrative pacing. Do not omit or add content.
+Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only.
+Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
+Output: Provide only the Thai translation. No additional explanations.
+
+Fantasy/RPG/Game Terminology (transliteration only, do not translate literally):
+
+Creatures/Monsters: Golem → โกเลม, Dragon → มังกร, Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์, Beastman → บีสต์แมน/มนุษย์ครึ่งสัตว์, Spirit → ภูต/จิตวิญญาณ, Fairy → แฟรี่/ภูตจิ๋ว, Lich → ลิช, Wyvern → ไวเวิร์น, Minotaur → มิโนทอร์, Mermaid/Siren → นางเงือก/ไซเรน, Homunculus → โฮมุนคุลุส/มนุษย์เทียม, Familiar → แฟมิเลียร์/สัตว์เลี้ยงเวทมนตร์, Mutant → มิวแทนต์/สัตว์กลายพันธุ์
+Locations: Dungeon → ดันเจี้ยน, Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร, Labyrinth → เขาวงกต, Sanctuary → สถานศักดิ์สิทธิ์, Ruins → ซากโบราณสถาน, Capital → เมืองหลวง, Empire → จักรวรรดิ, Frontier → ชายแดน/พรมแดน, Abyss → ขุมนรก/อะบิส, Territory → อาณาเขต/ดินแดน
+Game Systems: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP/AGI/STR/INT/DEX → keep as is, Magic → เวทมนตร์, Mana → มานา, Status Window → หน้าต่างสถานะ/สเตตัส, Inventory → ช่องเก็บของ/อินเวนทอรี, Title → ฉายา, Drop → ดรอป/ไอเทมดรอป, Potion → โพชั่น/น้ำยาฟื้นฟู, Equipment → อุปกรณ์สวมใส่/ยุทโธปกรณ์, Durability → ค่าความทนทาน, Buff/Debuff → บัฟ/ดีบัฟ
+Classes/Professions: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์, Swordsman → นักดาบ, Cleric → นักบวช/เคลริค, Assassin → นักฆ่า/แอสซาซิน, Necromancer → เนโครแมนเซอร์/ผู้ใช้เวทมนตร์ดำ, Alchemist → นักเล่นแร่แปรธาตุ, Blacksmith → ช่างตีเหล็ก, Merchant → พ่อค้า, Summoner → ผู้อัญเชิญ/ซัมมอนเนอร์
+Ranks/Titles: Rank S/A/B/C/D/E/F → แรงก์ S/A/B/C/D/E/F, Hero → ผู้กล้า, Demon Lord → จอมมาร, Guild Master → กิลด์มาสเตอร์/หัวหน้ากิลด์, Noble → ขุนนาง, Duke/Marquis/Count/Viscount/Baron → ดยุก/มาร์ควิส/เคานต์/ไวเคานต์/บารอน, Commoner → สามัญชน
+Magic/Elements: Spell → คาถา/บทเวท, Incantation → คำร่าย, Magic Circle → วงเวท/วงแหวนเวทมนตร์, Attribute/Element → ธาตุ, Light/Dark → ธาตุแสง/ธาตุความมืด` + SHARED_IDIOMS
+    },
+
+    ROMANCE: {
+        name: '💕 โรแมนติก / ดราม่า',
+        desc: 'นิยายรัก ดราม่า ความสัมพันธ์ เน้นอารมณ์ภายใน หัวใจสั่น และบทสนทนาที่ซึ้งกินใจ',
+        temperature: 0.4, top_p: 0.92, frequency_penalty: 0.05, presence_penalty: 0.08,
+        prompt: `You are a professional expert in translating English romantic drama novels into Thai, in the style of popular Thai translated romance novels.
+
+Translation Rules (must be strictly followed):
+
+Style: Capture the full emotional weight — heart-fluttering, heartbreaking, tender, or tension-filled. The language should feel warm, natural, and resonate with Thai readers of romance novels. Avoid stiff or clinical phrasing.
+Dialogue: Match the emotional register exactly. Use natural Thai romantic speech patterns. Vary pronouns to reflect intimacy levels:
+  - Early/distant: ผม/คุณ, ฉัน/คุณ
+  - Growing closeness: เธอ, แก, มึง/กู (only if the original is explicitly crude/playful)
+  - Intimate/affectionate: หนู, ที่รัก, ที่หวาน, ชื่อเล่น as appropriate
+Inner Monologue: Render internal thoughts naturally — Thai readers expect rich, introspective narration. Use italics-equivalent dashes (—) or clearly set apart the thought.
+Structure: Maintain paragraph breaks and emotional pacing. Never rush a tender or dramatic scene.
+Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only. For nicknames or pet names, find a Thai equivalent that carries the same warmth.
+Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
+Output: Provide only the Thai translation. No additional explanations.
+
+Romantic & Emotional Vocabulary:
+
+Feelings/Sensations: flutter → หัวใจสั่น/ใจหวิว, ache → เจ็บปวดลึกๆ, longing → ความคิดถึง/โหยหา, warmth → ความอบอุ่น, butterflies → ใจสั่น/ตื่นเต้นจนใจจะหล่น, heartbeat → เสียงหัวใจ/การเต้นของหัวใจ, blush → หน้าแดง/แก้มร้อน, shiver → สั่น/ขนลุก (from emotion), gaze → สายตา/แววตา, stare → จ้องมอง
+Relationship Terms: soulmate → คนที่ใช่/เนื้อคู่, chemistry → ความเข้ากัน/ประกายระหว่างกัน, confession → การสารภาพรัก, rejection → การปฏิเสธ, jealousy → ความหึงหวง, possessive → หวงแหน/ครอบครอง, clingy → ติดพัน/ไม่ยอมห่าง, fall for → หลงรัก/ตกหลุมรัก, let go → ปล่อยวาง/놓아주다
+Dramatic Expressions: silence stretched between them → ความเงียบแผ่ขยายระหว่างทั้งสอง, words caught in her throat → คำพูดติดอยู่ในลำคอ, heart clenched → หัวใจบีบตัว, breath hitched → หยุดหายใจชั่วขณะ, eyes stung → ตาแสบ (ก่อนจะร้องไห้)
+
+Tone Guidance:
+
+Tender scenes: Use soft, flowing sentences. Let emotions breathe.
+Tense/conflict scenes: Shorter sentences. Sharp dialogue. Feel the friction.
+Reconciliation/climax: Build rhythm gradually. Let the release feel earned.` + SHARED_IDIOMS
+    },
+
+    ACTION: {
+        name: '🥊 แอ็กชัน / ต่อสู้',
+        desc: 'นิยายแอ็กชัน การต่อสู้ ศิลปะการป้องกันตัว เน้นประโยคกระชับ จังหวะเร็ว และความเข้มข้น',
+        temperature: 0.3, top_p: 0.88, frequency_penalty: 0.15, presence_penalty: 0.1,
+        prompt: `You are a professional expert in translating English action and martial arts novels into Thai.
+
+Translation Rules (must be strictly followed):
+
+Style: Fast-paced, punchy, and kinetic. Action sequences use short, sharp sentences to drive momentum. Descriptive passages may be longer to build tension — but never slow the rhythm of a fight.
+Dialogue: Direct and forceful. Characters under pressure speak in fragments. Use Thai pronouns that carry authority or aggression as appropriate (ข้า, กู, มึง for brutal/rough characters; ผม/ฉัน for composed ones).
+Structure: Preserve every paragraph break. In fight scenes, single-sentence paragraphs are intentional — keep them.
+Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only.
+Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
+Output: Provide only the Thai translation. No additional explanations.
+
+Action & Combat Vocabulary:
+
+Movement: dash → พุ่งตัว, dodge → 躲หลบ/หลีก, lunge → พุ่งเข้าใส่, parry → รับ/ป้องกัน, block → สกัด, counter → โต้กลับ, evade → หลบหลีก, weave → ร่อน/เคลื่อนไหวหลบ, charge →돌突突돌진/พุ่งเข้าใส่, retreat → ถอยร่น, stance → ท่วงท่า/ท่ายืน
+Strikes: punch → หมัด, kick → เตะ, slam → ฟาด, crush → บดขยี้, slash → ฟัน, stab → แทง, jab → แย็บ, hook → ฮุค, uppercut → อัปเปอร์คัต, sweep → กวาด, headbutt → โขกหัว
+Impact Words: crack → แตกสลาย/กระหึ่ม, shatter → แตกเป็นเสี่ยงๆ, explode → ระเบิด, crumble → พังทลาย, snap → หัก, tear → ฉีก, pierce → ทะลุทะลวง, rip → ฉีกขาด
+Body/Pain: blood → เลือด, wound → บาดแผล, bruise → รอยช้ำ, fracture → กระดูกแตก/ร้าว, numb → ชา, adrenaline → อะดรีนาลีน/ความตื่นตัว, instinct → สัญชาตญาณ, exhausted → ร่างกายพัง/หมดแรง
+Martial Arts Styles (transliterate, do not translate): Muay Thai → มวยไทย, Judo → ยูโด, Karate → คาราเต้, Taekwondo → เทควันโด, Boxing → มวยสากล, Wrestling → มวยปล้ำ, BJJ/Jiu-Jitsu → บีเจเจ/ยิวยิตสู, Kung Fu → กังฟู, Kendo → เคนโด้, Capoeira → คาโปเอรา
+Weapons: sword → ดาบ, blade → ใบมีด/คมดาบ, spear → หอก, axe → ขวาน, bow → ธนู, shield → โล่, gun → ปืน, rifle → ปืนไรเฟิล, knife → มีด, chain → โซ่
+
+Pacing Rules:
+
+Fight sequences: prefer short sentences (5–12 words). One action per sentence.
+Tension build-up: medium sentences, slow down with sensory detail.
+Decisive moments (killing blow, turning point): one stark sentence. Let it land.` + SHARED_IDIOMS
+    },
+
+    SPORTS: {
+        name: '🏆 กีฬา',
+        desc: 'นิยายกีฬา การแข่งขัน ทีม ความมุ่งมั่น เน้นบรรยากาศสนาม ศัพท์เทคนิค และแรงบันดาลใจ',
+        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.08,
+        prompt: `You are a professional expert in translating English sports novels and manga into Thai.
+
+Translation Rules (must be strictly followed):
+
+Style: Energetic, passionate, and inspiring. Match the sport's rhythm — football scenes feel different from chess matches. Capture the crowd noise, the sweat, the stakes. Motivational speeches should stir the reader.
+Dialogue: Natural and spirited. Teammates use casual, warm Thai (เฮ้ย, ว่ะ, นาย, เพื่อน). Coaches may use more formal or commanding language. Rivals speak with edge.
+Commentary/Narration: When describing live play, use present-tense energy even if the source is past tense — this mirrors Thai sports broadcasting style.
+Structure: Maintain paragraph breaks. Slow-motion key moments are intentional — preserve their weight.
+Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only. Keep sport-specific position names in English where Thai audiences know them (e.g., striker, setter).
+Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
+Output: Provide only the Thai translation. No additional explanations.
+
+Universal Sports Vocabulary:
+
+General: match/game → การแข่งขัน/เกม, tournament → ทัวร์นาเมนต์/รายการแข่งขัน, championship → ชิงแชมป์, final → รอบชิงชนะเลิศ, score → สกอร์/คะแนน, win → ชนะ, lose → แพ้, draw/tie → เสมอ, comeback → การกลับมา, underdog → ทีมรอง/คนที่ไม่มีใครคาดหวัง, momentum → โมเมนตัม/พลังเกม, pressure → ความกดดัน, clutch → ทำได้ในนาทีสำคัญ, overtime/extra time → ต่อเวลา, penalty → จุดโทษ/โทษ, foul → ฟาวล์/ผิดกติกา
+Team Dynamics: captain → กัปตัน, coach → โค้ช, rookie → มือใหม่/น้องใหม่, veteran → ทหารผ่านศึก/ผู้มีประสบการณ์, bench → ม้านั่งสำรอง, substitute → ตัวสำรอง, formation → รูปแบบทีม/ฟอร์เมชัน, strategy → กลยุทธ์, chemistry → ความเข้าหากัน/เล่นกันได้
+Performance: peak/in the zone → ฟอร์มดี/อยู่ในจุดที่ดีที่สุด, slump → ฟอร์มตก, warm up → วอร์มอัพ, fatigue → ล้า/อ่อนเพลีย, adrenaline → อะดรีนาลีน, instinct → สัญชาตญาณ, reflexes → รีเฟล็กซ์/ปฏิกิริยาตอบสนอง, endurance → ความอึด, stamina → สแตมมิน่า/ความทนทาน
+
+Football/Soccer: goal → ประตู, offside → ล้ำหน้า, header → โหม่ง, dribble → เลี้ยงบอล, pass → ส่งบอล, cross → เซ็นเตอร์, volley → วอลเลย์, free kick → เตะฟรีคิก, corner → เตะมุม, goalkeeper/keeper → ผู้รักษาประตู, striker → กองหน้า, midfielder → กองกลาง, defender → กองหลัง, hat-trick → แฮตทริก
+
+Basketball: dunk → ดังค์, three-pointer → ยิงสาม, layup → เลย์อัพ, rebound → รีบาวด์, assist → แอสซิสต์, block → บล็อก, steal → สกัดบอล, fast break → บุกเร็ว, pick and roll → พิกแอนด์โรล, point guard → พอยต์การ์ด, power forward → พาวเวอร์ฟอร์เวิร์ด, center → เซนเตอร์
+
+Baseball/Softball: pitch → ขว้าง, hit → ตี, home run → โฮมรัน, strikeout → สไตรค์เอาท์, batter → ผู้ตี, pitcher → นักขว้าง, catcher → ผู้รับ, inning → อินนิ่ง, base → เบส, double play → ดับเบิ้ลเพลย์
+
+Tennis/Badminton: serve → เสิร์ฟ, rally → โต้กันยาว, ace → เอซ, fault → ฟอลต์, deuce → ดิวซ์, match point → แมตช์พอยต์, forehand/backhand → โฟร์แฮนด์/แบ็คแฮนด์, smash → สแมช, drop shot → ดรอปช็อต, net → เน็ต
+
+Swimming/Athletics: lap → รอบ/แลป, stroke → สโตรก, heat → รอบคัดเลือก, sprint → สปรินต์, relay → ผลัด, personal best (PB) → สถิติส่วนตัว, world record (WR) → สถิติโลก, lane → เลน, finish line → เส้นชัย
+
+Tone Guidance:
+
+Live action/play-by-play: Short sentences, present-tense energy, exclamation where earned.
+Training/growth scenes: Reflective tone, inner struggle, show the grind.
+Team speech / motivational moment: Build to a peak. Thai readers love earnest emotion — do not underplay it.` + SHARED_IDIOMS
+    }
+};
+
+const MODE_CONFIG = {
+    NOVEL: {
+        name: 'นิยาย/วรรณกรรม',
+        desc: 'เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ',
+        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
+        prompt: null  // resolved dynamically from GENRE_CONFIG
+    },
+    ACADEMIC: {
+        name: 'วิชาการ/บทความ',
+        desc: 'เหมาะสำหรับบทความวิชาการ รายงาน เอกสารทางการ เน้นความแม่นยำและศัพท์เฉพาะสาขา',
+        temperature: 0.3, top_p: 0.85, frequency_penalty: 0.05, presence_penalty: 0.05,
+        prompt: `You are a professional academic translator specializing in English-to-Thai translation of scholarly and technical texts.
+
+Translation Rules (must be strictly followed):
+
+Style: Formal academic Thai. Preserve technical precision over literary flair. Maintain the logical structure and argumentative flow of the original.
+Terminology: Keep established technical terms in English on first use, followed by Thai equivalent in parentheses, e.g., "machine learning (การเรียนรู้ของเครื่อง)". On subsequent uses, Thai term alone is acceptable.
+Citations & References: Do not translate author names, journal names, or citation formats. Keep them exactly as in the original.
+Numbers & Units: Keep all numbers, units, percentages, and statistics exactly as written.
+Structure: Preserve all headings, subheadings, paragraph structure, bullet points, and numbered lists exactly.
+Format: Do not add or remove Markdown. Mirror the formatting of the source precisely.
+Output: Provide only the Thai translation. No explanations or commentary.
+
+Academic Vocabulary Guidance:
+
+Research terms: hypothesis → สมมติฐาน, methodology → วิธีวิทยา/ระเบียบวิธีวิจัย, findings → ผลการวิจัย, analysis → การวิเคราะห์, framework → กรอบแนวคิด, variable → ตัวแปร, correlation → สหสัมพันธ์, significance → นัยสำคัญ, sample → กลุ่มตัวอย่าง, literature review → การทบทวนวรรณกรรม
+Hedging language: suggest → ชี้ให้เห็น/บ่งชี้, indicate → ระบุ/แสดงให้เห็น, appear to → ดูเหมือนจะ, may/might → อาจจะ, tend to → มีแนวโน้มที่จะ, arguably → อาจกล่าวได้ว่า
+Connectors: furthermore → ยิ่งไปกว่านั้น, however → อย่างไรก็ตาม, therefore → ดังนั้น, consequently → ด้วยเหตุนี้, in contrast → ในทางตรงกันข้าม, notably → ที่น่าสังเกตคือ`
     }
 };
 
@@ -422,6 +588,7 @@ let lastTranslatedContext = '';
 let lastChunkENContext = '';
 let currentInputMode = 'file';
 let currentTranslationMode = 'NOVEL';
+let currentGenre = 'FANTASY';
 let isLibrariesReady = false;
 let glossaryRows = [];
 let currentJobId = null;
@@ -453,7 +620,33 @@ function setMode(mode) {
     currentTranslationMode = mode;
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     document.getElementById('modeDesc').textContent = MODE_CONFIG[mode].desc;
-    document.getElementById('translateLabel').textContent = `เริ่มแปล (${MODE_CONFIG[mode].name})`;
+    const genreRow = document.getElementById('genreRow');
+    if (mode === 'NOVEL') {
+        genreRow.classList.add('visible');
+        const gc = GENRE_CONFIG[currentGenre];
+        document.getElementById('translateLabel').textContent = `เริ่มแปล (${gc.name})`;
+    } else {
+        genreRow.classList.remove('visible');
+        document.getElementById('translateLabel').textContent = `เริ่มแปล (${MODE_CONFIG[mode].name})`;
+    }
+}
+
+function setGenre(genre) {
+    currentGenre = genre;
+    document.querySelectorAll('.genre-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.genre === genre));
+    const gc = GENRE_CONFIG[genre];
+    document.getElementById('genreDesc').textContent = gc.desc;
+    document.getElementById('translateLabel').textContent = `เริ่มแปล (${gc.name})`;
+}
+
+function getActivePrompt() {
+    if (currentTranslationMode === 'NOVEL') return GENRE_CONFIG[currentGenre].prompt;
+    return MODE_CONFIG[currentTranslationMode].prompt;
+}
+
+function getActiveConfig() {
+    if (currentTranslationMode === 'NOVEL') return GENRE_CONFIG[currentGenre];
+    return MODE_CONFIG[currentTranslationMode];
 }
 
 function switchInputTab(tab) {
@@ -602,7 +795,7 @@ function getCheckpointKey(jobId) { return CHECKPOINT_KEY_PREFIX + jobId; }
 function saveCheckpoint(jobId, chunks, completedIndex, parts, mode) {
     try {
         const data = {
-            jobId, mode, totalChunks: chunks.length,
+            jobId, mode, genre: currentGenre, totalChunks: chunks.length,
             completedIndex, parts,
             savedAt: Date.now(),
             sourceName: document.getElementById('fileName').textContent
@@ -639,6 +832,7 @@ async function resumeTranslation() {
     if (!cp) return;
     document.getElementById('resumeBanner').classList.remove('visible');
     setMode(cp.mode || currentTranslationMode);
+    if (cp.genre) setGenre(cp.genre);
     translatedParts = cp.parts || [];
     await runTranslation(cp.completedIndex);
 }
@@ -800,8 +994,8 @@ function getOverlapWords(text, wordCount = 50) {
 
 // ==================== API TRANSLATION ====================
 async function translateChunk(text, context = {}, retries = 2) {
-    const config = MODE_CONFIG[currentTranslationMode];
-    const systemPrompt = config.prompt + buildGlossaryPromptBlock();
+    const config = getActiveConfig();
+    const systemPrompt = getActivePrompt() + buildGlossaryPromptBlock();
 
     // Build user prompt with bilingual context + overlap hint
     const parts = [];
