@@ -6,7 +6,7 @@
 <title>EN → TH Novel & Academic Translator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://unpkg.com/docx@9.6.1/build/index.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 </script>
@@ -364,8 +364,9 @@ main {
             <div class="panel-header">
                 <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
                 <div style="display:flex;gap:0.4rem">
-                    <button class="copy-btn" onclick="copyText('sourceDisplay')">คัดลอก</button>
-                    <button class="copy-btn" onclick="exportDoc('source', event)">.docx</button>
+                    <!-- FIX 5: ส่ง this แทนการใช้ global event -->
+                    <button class="copy-btn" onclick="copyText('sourceDisplay', this)">คัดลอก</button>
+                    <button class="copy-btn" onclick="exportDoc('source', event)">⬇ .docx</button>
                 </div>
             </div>
             <div class="panel-body"><div class="translation-content" id="sourceDisplay"></div></div>
@@ -374,7 +375,8 @@ main {
             <div class="panel-header">
                 <span class="panel-title"><span class="lang-flag lang-th">TH</span> คำแปล</span>
                 <div style="display:flex;gap:0.4rem">
-                    <button class="copy-btn" onclick="copyText('translationDisplay')">คัดลอก</button>
+                    <!-- FIX 5: ส่ง this แทนการใช้ global event -->
+                    <button class="copy-btn" onclick="copyText('translationDisplay', this)">คัดลอก</button>
                     <button class="copy-btn" onclick="exportDoc('translation', event)">⬇ .docx</button>
                     <button class="copy-btn" onclick="exportDoc('both', event)" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button>
                 </div>
@@ -482,7 +484,6 @@ let currentTranslationMode = 'NOVEL';
 let isLibrariesReady = false;
 
 // ==================== INIT ====================
-// FIX: bumped timeout from 8s → 15s to allow CDN scripts to fully load
 window.addEventListener('load', () => {
     const checkInterval = setInterval(() => {
         if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
@@ -597,14 +598,26 @@ async function handleFile(file) {
                 let pageLines = [];
                 let currentLine = '';
                 let prevY = null;
+
                 for (const item of textContent.items) {
                     const curY = item.transform ? Math.round(item.transform[5]) : null;
                     if (prevY !== null && curY !== null && Math.abs(curY - prevY) > 4) {
                         if (currentLine.trim()) pageLines.push(currentLine.trim());
                         currentLine = '';
                     }
-                    currentLine += item.str;
-                    if (item.hasEOL) { if (currentLine.trim()) pageLines.push(currentLine.trim()); currentLine = ''; }
+
+                    // FIX 1: เติม space ระหว่าง text items เพื่อป้องกันคำติดกัน
+                    const needsSpace =
+                        currentLine.length > 0 &&
+                        !currentLine.endsWith(' ') &&
+                        item.str.length > 0 &&
+                        !item.str.startsWith(' ');
+                    currentLine += (needsSpace ? ' ' : '') + item.str;
+
+                    if (item.hasEOL) {
+                        if (currentLine.trim()) pageLines.push(currentLine.trim());
+                        currentLine = '';
+                    }
                     prevY = curY;
                 }
                 if (currentLine.trim()) pageLines.push(currentLine.trim());
@@ -641,6 +654,19 @@ function countWords(text) { return text.trim().split(/\s+/).filter(w => w.length
 function showError(msg) { const box = document.getElementById('errorBox'); box.textContent = '⚠️ ' + msg; box.classList.add('visible'); setTimeout(() => box.classList.remove('visible'), 10000); }
 function clearError() { document.getElementById('errorBox').classList.remove('visible'); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+// FIX 4: ตัด context ที่ขอบ sentence ไม่ตัดกลาง
+function getTrailingContext(text, maxChars = 400) {
+    if (!text) return '';
+    // แยกตาม sentence endings ทั้งภาษาไทยและอังกฤษ
+    const sentences = text.match(/[^\n。.!?]+[。.!?\n]+/g) || [];
+    let result = '';
+    for (let i = sentences.length - 1; i >= 0; i--) {
+        if ((sentences[i] + result).length > maxChars) break;
+        result = sentences[i] + result;
+    }
+    return result.trim() || text.slice(-maxChars);
+}
 
 // ==================== CHUNKING ====================
 function buildNovelChunks(paragraphs, maxWords) {
@@ -680,32 +706,30 @@ function getChunkContext(chunks) {
     return sentences.slice(-3).join(' ').trim();
 }
 
-// ==================== VALIDATION (FIXED) ====================
-// FIX 1: ratio range widened — Thai text commonly runs 0.3x–4x English char count
-// FIX 2: brackets check replaced — parentheses are valid (used for name format "ชื่อไทย (English)")
-//         only raw Markdown tokens are now flagged
+// ==================== VALIDATION ====================
 function validateTranslation(original, translated) {
     const issues = [];
 
-    // Must contain Thai characters
+    // ต้องมีอักษรไทย
     if (!/[ก-๙]/.test(translated)) {
         issues.push('ไม่พบข้อความภาษาไทย');
     }
 
-    // Only flag actual Markdown formatting symbols, NOT parentheses
+    // FIX 2: ตรวจเฉพาะ Markdown token จริง ๆ ไม่รวม ()
     if (/[*#`>|]/.test(translated)) {
         issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
     }
 
-    // Widened ratio: Thai regularly hits 1.5x–3.5x English char length
-    const ratio = translated.length / Math.max(original.length, 1);
-    const minRatio = 0.3;
-    const maxRatio = currentTranslationMode === 'ACADEMIC' ? 4.5 : 4.0;
-    if (ratio < minRatio || ratio > maxRatio) {
-        issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
+    // FIX 2: ข้ามการเช็ค ratio สำหรับข้อความสั้น (< 60 chars) เพราะ expansion ไทยสูงมาก
+    if (original.length >= 60) {
+        const ratio = translated.length / original.length;
+        const maxRatio = currentTranslationMode === 'ACADEMIC' ? 5.0 : 4.5;
+        if (ratio < 0.25 || ratio > maxRatio) {
+            issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
+        }
     }
 
-    // Reject system-prompt echo
+    // ตรวจ system prompt echo
     const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation'];
     if (sysPhrases.some(p => translated.toLowerCase().includes(p))) {
         issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
@@ -759,8 +783,15 @@ async function translateChunk(text, context = '', retries = 2) {
 
             const result = content.trim();
             const validation = validateTranslation(text, result);
+
             if (!validation.valid && attempt < retries) {
-                console.warn('Validation failed:', validation.issues);
+                // FIX 3: ratio-only issue → คำแปลน่าจะถูก ไม่ต้อง retry
+                const nonRatioIssues = validation.issues.filter(i => !i.includes('สัดส่วน'));
+                if (nonRatioIssues.length === 0) {
+                    console.info('Ratio warning only, accepting result:', validation.issues);
+                    return result;
+                }
+                console.warn('Validation failed, retrying:', validation.issues);
                 await sleep(RETRY_DELAY);
                 continue;
             }
@@ -813,8 +844,9 @@ translateBtn.addEventListener('click', async () => {
 
             if (i > 0) await sleep(RATE_LIMIT_DELAY);
 
+            // FIX 4: ใช้ getTrailingContext แทน .slice(-400) เพื่อตัดที่ขอบ sentence
             const prevContext = lastTranslatedContext
-                ? `คำแปลก่อนหน้า:\n${lastTranslatedContext.slice(-400)}`
+                ? `คำแปลก่อนหน้า:\n${getTrailingContext(lastTranslatedContext)}`
                 : '';
 
             const translated = await translateChunk(chunk.text, prevContext);
@@ -822,9 +854,8 @@ translateBtn.addEventListener('click', async () => {
             lastTranslatedContext = translated;
             successCount++;
 
-            if (i % 2 === 0 || i === chunks.length - 1) {
-                document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
-            }
+            // FIX 6: อัปเดต UI ทุก chunk ไม่ใช่ทุก 2 chunk
+            document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
         }
 
         const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
@@ -871,7 +902,16 @@ resetBtn.addEventListener('click', () => {
 
 // ==================== EXPORT ====================
 async function exportDoc(mode, evt) {
-    if (!window.docx) return showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
+    if (!window.docx) {
+        showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ — กรุณารอสักครู่แล้วลองใหม่');
+        return;
+    }
+    const required = ['Document','Packer','Paragraph','TextRun','Table','TableRow','TableCell','WidthType','HeadingLevel','ShadingType','BorderStyle'];
+    const missing = required.filter(k => !window.docx[k]);
+    if (missing.length > 0) {
+        showError('โหลด library ไม่สมบูรณ์ (ขาด: ' + missing.join(', ') + ') — กรุณารีเฟรชหน้าเว็บ');
+        return;
+    }
 
     const sourceText = document.getElementById('sourceDisplay').textContent;
     const translationText = document.getElementById('translationDisplay').textContent;
@@ -885,7 +925,7 @@ async function exportDoc(mode, evt) {
         const {
             Document, Packer, Paragraph, TextRun,
             Table, TableRow, TableCell,
-            WidthType, HeadingLevel, AlignmentType,
+            WidthType, HeadingLevel,
             ShadingType, BorderStyle
         } = window.docx;
 
@@ -959,16 +999,19 @@ async function exportDoc(mode, evt) {
     }
 }
 
-// ==================== COPY ====================
-function copyText(id) {
+// ==================== COPY (FIX 5: ใช้ btn parameter แทน global event) ====================
+function copyText(id, btn = null) {
     const el = document.getElementById(id);
     if (!el) return;
     const text = el.textContent;
-    if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) return showError('ยังไม่มีเนื้อหาให้คัดลอก');
-    const btn = (event && event.target && event.target.classList.contains('copy-btn')) ? event.target : null;
+    if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) {
+        return showError('ยังไม่มีเนื้อหาให้คัดลอก');
+    }
     navigator.clipboard.writeText(text).then(() => {
         if (btn) {
-            const orig = btn.textContent; btn.textContent = '✓ คัดลอกแล้ว'; btn.style.color = 'var(--success)';
+            const orig = btn.textContent;
+            btn.textContent = '✓ คัดลอกแล้ว';
+            btn.style.color = 'var(--success)';
             setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
         }
     }).catch(() => showError('ไม่สามารถคัดลอกได้'));
