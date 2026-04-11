@@ -19,234 +19,119 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
     --success: #2d7a4a; --success-bg: #e8f5ee; --error: #991b1b; --error-bg: #fef2f2;
     --radius: 12px; --shadow: 0 2px 16px rgba(60,40,20,0.08);
     --input-bg: #fcfbf9; --input-border: #d4c8b5;
+    --warn: #92400e; --warn-bg: #fffbeb; --warn-border: #fde68a;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-    font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text);
-    min-height: 100vh; font-size: 16px; line-height: 1.7;
-}
-header {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 0 2rem; display: flex; align-items: center; gap: 1rem;
-    height: 60px; position: sticky; top: 0; z-index: 100;
-}
+body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 16px; line-height: 1.7; }
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 1rem; height: 60px; position: sticky; top: 0; z-index: 100; }
 .logo-mark { display: flex; align-items: center; gap: 0.5rem; }
-.logo-badge {
-    background: var(--accent); color: white; font-size: 11px; font-weight: 600;
-    letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px;
-}
-.logo-text {
-    font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); font-style: italic;
-}
-.header-sub {
-    font-size: 13px; color: var(--text-muted);
-    border-left: 1px solid var(--border); padding-left: 1rem;
-}
-main {
-    max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem;
-    display: flex; flex-direction: column; gap: 1.5rem;
-}
-.input-tabs, .mode-selector {
-    display: flex; gap: 0.5rem; background: var(--surface);
-    padding: 0.4rem; border-radius: var(--radius);
-    border: 1px solid var(--border); width: fit-content;
-}
+.logo-badge { background: var(--accent); color: white; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); font-style: italic; }
+.header-sub { font-size: 13px; color: var(--text-muted); border-left: 1px solid var(--border); padding-left: 1rem; }
+main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+.input-tabs, .mode-selector { display: flex; gap: 0.5rem; background: var(--surface); padding: 0.4rem; border-radius: var(--radius); border: 1px solid var(--border); width: fit-content; }
 .mode-selector { margin-bottom: 0.5rem; }
-.tab-btn, .mode-btn {
-    padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer;
-    font-size: 14px; font-weight: 500; color: var(--text-muted);
-    transition: all 0.15s; display: flex; align-items: center; gap: 0.4rem;
-    border: none; background: none; white-space: nowrap;
-}
+.tab-btn, .mode-btn { padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.15s; display: flex; align-items: center; gap: 0.4rem; border: none; background: none; white-space: nowrap; }
 .tab-btn:hover, .mode-btn:hover { color: var(--text); background: var(--surface2); }
-.tab-btn.active, .mode-btn.active {
-    background: var(--accent); color: white;
-    box-shadow: 0 2px 8px rgba(196,98,45,0.25);
-}
-.mode-desc {
-    font-size: 12px; color: var(--text-subtle); margin-top: 4px; padding-left: 4px;
-}
-.upload-zone {
-    background: var(--surface); border: 2px dashed var(--border);
-    border-radius: var(--radius); padding: 3rem 2rem; text-align: center;
-    cursor: pointer; transition: all 0.2s ease; position: relative;
-}
-.upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--accent); background: var(--accent-light);
-}
-.upload-zone input[type="file"] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-    width: 100%; height: 100%;
-}
-.upload-icon {
-    width: 52px; height: 52px; margin: 0 auto 1rem;
-    background: var(--surface2); border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-}
+.tab-btn.active, .mode-btn.active { background: var(--accent); color: white; box-shadow: 0 2px 8px rgba(196,98,45,0.25); }
+.mode-desc { font-size: 12px; color: var(--text-subtle); margin-top: 4px; padding-left: 4px; }
+.upload-zone { background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius); padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; }
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: var(--accent-light); }
+.upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { width: 52px; height: 52px; margin: 0 auto 1rem; background: var(--surface2); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
 .upload-icon svg { color: var(--accent); }
-.upload-title {
-    font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 0.4rem;
-}
+.upload-title { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 0.4rem; }
 .upload-sub { font-size: 14px; color: var(--text-muted); }
-.upload-hint {
-    font-size: 12px; color: var(--text-subtle); margin-top: 0.5rem;
-}
-.file-chip {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    background: var(--success-bg); color: var(--success);
-    border: 1px solid #b8ddc7; border-radius: 8px;
-    padding: 0.4rem 1rem; font-size: 14px; font-weight: 500; margin-top: 1rem;
-}
-.text-input-zone {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.5rem; display: none;
-}
+.upload-hint { font-size: 12px; color: var(--text-subtle); margin-top: 0.5rem; }
+.file-chip { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--success-bg); color: var(--success); border: 1px solid #b8ddc7; border-radius: 8px; padding: 0.4rem 1rem; font-size: 14px; font-weight: 500; margin-top: 1rem; }
+.text-input-zone { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; display: none; }
 .text-input-zone.active { display: block; }
-.text-input-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
-}
-.text-input-title {
-    font-size: 14px; font-weight: 600; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
-}
+.text-input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+.text-input-title { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .text-actions { display: flex; gap: 0.5rem; }
-.textarea-wrap {
-    position: relative; border: 1px solid var(--input-border);
-    border-radius: 8px; background: var(--input-bg);
-}
-#textInput {
-    width: 100%; min-height: 300px; max-height: 500px;
-    padding: 1rem; border: none; background: transparent;
-    font-family: 'Sarabun', sans-serif; font-size: 15px;
-    line-height: 1.8; color: var(--text); resize: vertical;
-    outline: none;
-}
+.textarea-wrap { position: relative; border: 1px solid var(--input-border); border-radius: 8px; background: var(--input-bg); }
+#textInput { width: 100%; min-height: 300px; max-height: 500px; padding: 1rem; border: none; background: transparent; font-family: 'Sarabun', sans-serif; font-size: 15px; line-height: 1.8; color: var(--text); resize: vertical; outline: none; }
 #textInput::placeholder { color: var(--text-subtle); }
-.textarea-footer {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0.5rem 1rem; font-size: 12px; color: var(--text-subtle);
-    background: var(--surface2); border-radius: 0 0 8px 8px;
-}
-.btn-sm {
-    padding: 0.3rem 0.8rem; font-size: 12px; border-radius: 4px;
-    border: 1px solid var(--border); background: var(--surface);
-    color: var(--text); cursor: pointer; transition: all 0.15s;
-}
+.textarea-footer { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; font-size: 12px; color: var(--text-subtle); background: var(--surface2); border-radius: 0 0 8px 8px; }
+.btn-sm { padding: 0.3rem 0.8rem; font-size: 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.15s; }
 .btn-sm:hover { background: var(--surface2); }
-.panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
-}
-.panel-header {
-    background: var(--surface2); border-bottom: 1px solid var(--border);
-    padding: 0.8rem 1.25rem; display: flex; align-items: center;
-    justify-content: space-between; gap: 1rem; flex-wrap: wrap;
-}
-.panel-title {
-    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--text-muted);
-    display: flex; align-items: center; gap: 0.5rem;
-}
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.panel-header { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 0.8rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.panel-title { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
 .panel-body { padding: 1.25rem; }
-.text-content {
-    font-size: 15px; line-height: 1.8; color: var(--text);
-    white-space: pre-wrap; max-height: 320px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
-}
-.char-count {
-    font-size: 12px; color: var(--text-subtle);
-    background: var(--surface2); padding: 3px 8px; border-radius: 4px;
-}
+.text-content { font-size: 15px; line-height: 1.8; color: var(--text); white-space: pre-wrap; max-height: 320px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.char-count { font-size: 12px; color: var(--text-subtle); background: var(--surface2); padding: 3px 8px; border-radius: 4px; }
 .controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.btn {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 500;
-    padding: 0.6rem 1.4rem; border-radius: 8px; border: none;
-    cursor: pointer; transition: all 0.15s ease; text-decoration: none;
-}
+.btn { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 500; padding: 0.6rem 1.4rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.15s ease; text-decoration: none; }
 .btn-primary { background: var(--accent); color: white; }
 .btn-primary:hover:not(:disabled) { background: #a8521f; transform: translateY(-1px); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-secondary {
-    background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border);
-}
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover:not(:disabled) { background: var(--border); }
-.progress-wrap {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.25rem; display: none;
-}
+.btn-resume { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border); }
+.btn-resume:hover:not(:disabled) { background: #fef3c7; }
+.progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; display: none; }
 .progress-wrap.visible { display: block; }
-.progress-label {
-    display: flex; justify-content: space-between;
-    font-size: 14px; color: var(--text-muted); margin-bottom: 0.6rem;
-}
-.progress-bar-track {
-    height: 6px; background: var(--surface2); border-radius: 999px; overflow: hidden;
-}
-.progress-bar-fill {
-    height: 100%; background: var(--accent); border-radius: 999px;
-    transition: width 0.3s ease; width: 0%;
-}
-.progress-status {
-    font-size: 13px; color: var(--text-muted); margin-top: 0.6rem; min-height: 20px;
-}
-.result-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
-}
+.progress-label { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-muted); margin-bottom: 0.6rem; }
+.progress-bar-track { height: 6px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; width: 0%; }
+.progress-status { font-size: 13px; color: var(--text-muted); margin-top: 0.6rem; min-height: 20px; }
+.progress-eta { font-size: 12px; color: var(--text-subtle); margin-top: 0.3rem; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
-.lang-flag {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    font-size: 12px; font-weight: 600; padding: 2px 8px;
-    border-radius: 4px;
-}
+.lang-flag { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
 .lang-en { background: #e8f0fe; color: #1a56c4; }
 .lang-th { background: #fef3e8; color: #c4622d; }
-.translation-content {
-    font-size: 16px; line-height: 2.2; color: var(--text);
-    white-space: pre-wrap; max-height: 600px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
-}
-.copy-btn {
-    background: none; border: 1px solid var(--border); color: var(--text-muted);
-    font-size: 12px; font-family: 'Sarabun', sans-serif;
-    padding: 3px 10px; border-radius: 5px; cursor: pointer; transition: all 0.15s;
-}
+.translation-content { font-size: 16px; line-height: 2.2; color: var(--text); white-space: pre-wrap; max-height: 600px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.copy-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-family: 'Sarabun', sans-serif; padding: 3px 10px; border-radius: 5px; cursor: pointer; transition: all 0.15s; }
 .copy-btn:hover { background: var(--surface2); color: var(--text); }
 .copy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-subtle); font-size: 14px; }
 .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
-.error-box {
-    background: var(--error-bg); border: 1px solid #fecaca;
-    color: var(--error); border-radius: 8px; padding: 0.8rem 1rem;
-    font-size: 14px; display: none;
-}
+.error-box { background: var(--error-bg); border: 1px solid #fecaca; color: var(--error); border-radius: 8px; padding: 0.8rem 1rem; font-size: 14px; display: none; }
 .error-box.visible { display: block; }
-.spinner {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white; border-radius: 50%;
-    animation: spin 0.7s linear infinite; display: none;
-}
+.resume-banner { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 1rem 1.25rem; display: none; flex-direction: column; gap: 0.75rem; }
+.resume-banner.visible { display: flex; }
+.resume-banner-title { font-size: 14px; font-weight: 600; color: var(--warn); display: flex; align-items: center; gap: 0.4rem; }
+.resume-banner-info { font-size: 13px; color: var(--text-muted); }
+.resume-banner-actions { display: flex; gap: 0.6rem; }
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
 .spinner.visible { display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-.loading-overlay {
-    position: fixed; inset: 0; background: rgba(250,248,244,0.9);
-    display: none; align-items: center; justify-content: center;
-    flex-direction: column; gap: 1rem; z-index: 1000;
-}
+.loading-overlay { position: fixed; inset: 0; background: rgba(250,248,244,0.9); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; z-index: 1000; }
 .loading-overlay.visible { display: flex; }
-.loading-spinner {
-    width: 40px; height: 40px; border: 3px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
+.loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 .loading-text { font-size: 14px; color: var(--text-muted); }
+
+/* ==================== GLOSSARY STYLES ==================== */
+.glossary-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.glossary-header { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 0.8rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; user-select: none; }
+.glossary-header:hover { background: #ede9e0; }
+.glossary-title { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
+.glossary-toggle-icon { transition: transform 0.2s; font-size: 12px; color: var(--text-subtle); }
+.glossary-toggle-icon.open { transform: rotate(180deg); }
+.glossary-body { padding: 1rem 1.25rem; display: none; }
+.glossary-body.open { display: block; }
+.glossary-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.6; }
+.glossary-table { width: 100%; border-collapse: collapse; }
+.glossary-table th { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; }
+.glossary-table td { padding: 0.35rem 0.4rem; vertical-align: middle; }
+.glossary-input { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--input-border); border-radius: 6px; background: var(--input-bg); font-family: 'Sarabun', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; }
+.glossary-input:focus { border-color: var(--accent); }
+.glossary-input::placeholder { color: var(--text-subtle); }
+.glossary-del-btn { background: none; border: none; color: var(--text-subtle); cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 16px; line-height: 1; transition: all 0.15s; }
+.glossary-del-btn:hover { background: var(--error-bg); color: var(--error); }
+.glossary-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+.glossary-count { font-size: 12px; color: var(--text-subtle); }
+.glossary-add-btn { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 13px; font-weight: 500; color: var(--accent); cursor: pointer; padding: 0.3rem 0.7rem; border: 1px solid #e8c4b0; border-radius: 6px; background: var(--accent-light); transition: all 0.15s; }
+.glossary-add-btn:hover { background: #f5dfd3; }
+.glossary-import-wrap { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.glossary-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; color: var(--text-muted); }
+.glossary-arrow { color: var(--text-subtle); font-size: 11px; }
 </style>
 </head>
 <body>
@@ -260,47 +145,32 @@ main {
 <main>
     <div class="input-tabs">
         <button class="tab-btn active" data-tab="file" onclick="switchInputTab('file')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             อัปโหลดไฟล์
         </button>
         <button class="tab-btn" data-tab="text" onclick="switchInputTab('text')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
             วางข้อความ
         </button>
     </div>
 
     <div class="mode-selector" id="modeSelector">
-        <button class="mode-btn active" data-mode="NOVEL" onclick="setMode('NOVEL')">
-            📖 นิยาย/วรรณกรรม
-        </button>
-        <button class="mode-btn" data-mode="ACADEMIC" onclick="setMode('ACADEMIC')">
-            📄 วิชาการ/บทความ
-        </button>
+        <button class="mode-btn active" data-mode="NOVEL" onclick="setMode('NOVEL')">📖 นิยาย/วรรณกรรม</button>
+        <button class="mode-btn" data-mode="ACADEMIC" onclick="setMode('ACADEMIC')">📄 วิชาการ/บทความ</button>
     </div>
     <div class="mode-desc" id="modeDesc">เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ</div>
 
     <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept=".docx,.pdf" />
         <div class="upload-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/>
-            </svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
         </div>
         <p class="upload-title">ลากไฟล์มาวางที่นี่</p>
         <p class="upload-sub">รองรับ .docx และ .pdf</p>
         <p class="upload-hint">💡 ไฟล์ PDF อาจใช้เวลาประมวลผลนานกว่าเล็กน้อย</p>
         <div id="fileChip" style="display:none">
             <span class="file-chip">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                 <span id="fileName">—</span>
             </span>
         </div>
@@ -325,6 +195,59 @@ main {
 
     <div class="error-box" id="errorBox"></div>
 
+    <!-- ==================== GLOSSARY PANEL ==================== -->
+    <div class="glossary-panel" id="glossaryPanel">
+        <div class="glossary-header" onclick="toggleGlossary()">
+            <span class="glossary-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                พจนานุกรมคำศัพท์เฉพาะ (Glossary)
+                <span id="glossaryBadge" style="display:none; background:var(--accent); color:white; font-size:10px; padding:1px 6px; border-radius:10px; font-weight:700;"></span>
+            </span>
+            <span class="glossary-toggle-icon" id="glossaryToggleIcon">▼</span>
+        </div>
+        <div class="glossary-body" id="glossaryBody">
+            <p class="glossary-desc">กำหนดคำแปลสำหรับชื่อตัวละคร สถานที่ หรือศัพท์เฉพาะ เพื่อให้การแปลสอดคล้องกันทุก chunk — ระบบจะฉีดคำเหล่านี้เข้า prompt ทุกครั้ง</p>
+            <table class="glossary-table" id="glossaryTable">
+                <thead>
+                    <tr>
+                        <th style="width:44%">คำภาษาอังกฤษ (ต้นฉบับ)</th>
+                        <th style="width:44%">คำภาษาไทย (คำแปล)</th>
+                        <th style="width:12%"></th>
+                    </tr>
+                </thead>
+                <tbody id="glossaryRows"></tbody>
+            </table>
+            <div class="glossary-footer">
+                <span class="glossary-count" id="glossaryCount">0 คำ</span>
+                <div class="glossary-import-wrap">
+                    <button class="glossary-add-btn" onclick="addGlossaryRow()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        เพิ่มคำ
+                    </button>
+                    <button class="btn-sm" onclick="clearGlossary()" style="font-size:12px">ล้างทั้งหมด</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RESUME BANNER ==================== -->
+    <div class="resume-banner" id="resumeBanner">
+        <div class="resume-banner-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            พบงานแปลที่ค้างอยู่
+        </div>
+        <div class="resume-banner-info" id="resumeInfo"></div>
+        <div class="resume-banner-actions">
+            <button class="btn btn-resume" id="resumeBtn" onclick="resumeTranslation()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                แปลต่อจากที่ค้าง
+            </button>
+            <button class="btn btn-secondary" onclick="discardCheckpoint()" style="font-size:14px">
+                ยกเลิกและเริ่มใหม่
+            </button>
+        </div>
+    </div>
+
     <div class="panel" id="sourcePanel" style="display:none">
         <div class="panel-header">
             <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
@@ -338,15 +261,11 @@ main {
             <div class="controls">
                 <button class="btn btn-primary" id="translateBtn">
                     <span class="spinner" id="spinner"></span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="translateIcon">
-                        <path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
-                    </svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="translateIcon"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
                     <span id="translateLabel">เริ่มแปล</span>
                 </button>
                 <button class="btn btn-secondary" id="resetBtn" style="display:none">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-                    </svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     เริ่มใหม่
                 </button>
             </div>
@@ -357,6 +276,7 @@ main {
         <div class="progress-label"><span>กำลังแปล...</span><span id="progressPct">0%</span></div>
         <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
         <div class="progress-status" id="progressStatus">กำลังเตรียม...</div>
+        <div class="progress-eta" id="progressEta"></div>
     </div>
 
     <div class="result-grid" id="resultGrid" style="display:none">
@@ -364,7 +284,6 @@ main {
             <div class="panel-header">
                 <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
                 <div style="display:flex;gap:0.4rem">
-                    <!-- FIX 5: ส่ง this แทนการใช้ global event -->
                     <button class="copy-btn" onclick="copyText('sourceDisplay', this)">คัดลอก</button>
                     <button class="copy-btn" onclick="exportDoc('source', event)">⬇ .docx</button>
                 </div>
@@ -375,7 +294,6 @@ main {
             <div class="panel-header">
                 <span class="panel-title"><span class="lang-flag lang-th">TH</span> คำแปล</span>
                 <div style="display:flex;gap:0.4rem">
-                    <!-- FIX 5: ส่ง this แทนการใช้ global event -->
                     <button class="copy-btn" onclick="copyText('translationDisplay', this)">คัดลอก</button>
                     <button class="copy-btn" onclick="exportDoc('translation', event)">⬇ .docx</button>
                     <button class="copy-btn" onclick="exportDoc('both', event)" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button>
@@ -392,20 +310,18 @@ main {
 </div>
 
 <script>
-// ==================== CONFIG & MODES ====================
+// ==================== CONFIG ====================
 const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
-const MAX_WORDS = 350;       // #9: ลดจาก 500 → ป้องกัน token overflow
+const MAX_WORDS = 350;
 const RETRY_DELAY = 1500;
-const RATE_LIMIT_DELAY = 800; // #6: เพิ่มจาก 400 → ลด 429 errors
+const RATE_LIMIT_DELAY = 800;
+const CHECKPOINT_KEY_PREFIX = 'translator_checkpoint_';
 
 const MODE_CONFIG = {
     NOVEL: {
         name: 'นิยาย/วรรณกรรม',
         desc: 'เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ',
-        temperature: 0.25,
-        top_p: 0.9,
-        frequency_penalty: 0.1,
-        presence_penalty: 0.1,
+        temperature: 0.25, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
         prompt: `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายและวรรณกรรมภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
 📋 กฎการแปล (ต้องปฏิบัติตามอย่างเคร่งครัด):
 1. [สไตล์] รักษาโทนเรื่อง: ทางการ/กึ่งทางการ/ภาษาพูด ตามบริบทต้นฉบับ
@@ -416,46 +332,24 @@ const MODE_CONFIG = {
 6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำอธิบายเพิ่มเติม
 
 ⚔️ ศัพท์แฟนตาซี/RPG/เกม (ทับศัพท์ ห้ามแปลตรงตัว):
-- สิ่งมีชีวิต/มอนสเตอร์: Golem → โกเลม, Dragon → มังกร (ยกเว้นชื่อเฉพาะ), Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์
-- สถานที่: Dungeon → ดันเจี้ยน (ไม่ใช่ถ้ำหรือคุก เว้นแต่บริบทชัดเจน), Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร
-- ระบบเกม: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP → คงทับศัพท์, Status → สเตตัส, Magic → เวทมนตร์, Mana → มานา, Stamina → พลังงาน/สแตมิน่า
-- อาวุธ/ไอเทม: ใช้ทับศัพท์หากเป็นชื่อเฉพาะ เช่น Excalibur → เอ็กซ์แคลิเบอร์; คำทั่วไปเช่น Sword → ดาบ, Shield → โล่, Staff → คทา/ไม้เท้า
-- คลาส/อาชีพ: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก/นักลอบเร้น, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์
+- สิ่งมีชีวิต/มอนสเตอร์: Golem → โกเลม, Dragon → มังกร, Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์
+- สถานที่: Dungeon → ดันเจี้ยน, Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร
+- ระบบเกม: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP → คงทับศัพท์, Magic → เวทมนตร์, Mana → มานา
+- คลาส/อาชีพ: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์
 
 🔤 สำนวนและ Phrasal Verbs (แปลตามความหมาย ห้ามแปลคำต่อคำ):
-- "leave X alone" → ปล่อยให้ X อยู่ตามลำพัง / ไม่เข้าไปยุ่งเกี่ยวกับ X
-- "go along with" → ยอมรับ / เห็นด้วย / ทำตาม
-- "give up" → ยอมแพ้ / เลิก / หยุด
-- "make up" → แต่งเรื่อง / ชดเชย / แต่งหน้า (ดูบริบท)
-- "break down" → พังทลาย / สลาย / ร้องไห้ (ดูบริบท)
-- "look into" → สืบสวน / ตรวจสอบ
-- "get away" → หลบหนี / หนีออกไป (ดูบริบท)
-- "come across" → พบเจอโดยบังเอิญ
-- "run into" → เจอโดยบังเอิญ / ชน
-- "hold on" → รอก่อน / อดทน (ดูบริบท)
-- "take on" → รับมือ / รับงาน / เผชิญ
-- "show up" → ปรากฏตัว / มาถึง
-- สำนวนเปรียบเปรย เช่น "bite the bullet" → กัดฟันทน, "kick the bucket" → ตาย, "spill the beans" → เปิดเผยความลับ
+- "leave X alone" → ปล่อยให้ X อยู่ตามลำพัง, "go along with" → ยอมรับ/ทำตาม, "give up" → ยอมแพ้/เลิก
+- "make up" → แต่งเรื่อง/ชดเชย (ดูบริบท), "break down" → พังทลาย/ร้องไห้ (ดูบริบท)
+- "look into" → สืบสวน/ตรวจสอบ, "show up" → ปรากฏตัว, "run into" → เจอโดยบังเอิญ
 
 🎭 การจัดการเนื้อหาพิเศษ:
 - บทสนทนา: ใช้เครื่องหมายคำพูดไทย "..." และแทรกคำกริยาบทพูดให้ธรรมชาติ
-- ความคิดตัวละคร: ใช้เครื่องหมายขีดกลาง — หรือเอียงตามความเหมาะสม
-- บทกวี/คำคล้องจอง: ถ่ายทอดอารมณ์และจังหวะด้วยภาษาไทยที่สละสลวย
-
-✅ ตัวอย่าง:
-ต้นฉบับ: "I can't believe it," Harry whispered, staring at the castle.
-คำแปล: "ฉันไม่เชื่อเลย" แฮร์รี่กระซิบ พลางจ้องมองปราสาทนั้น
-
-ต้นฉบับ: He lost two golems exploring the dungeon and decided to leave it alone for now.
-คำแปล: เขาเสียโกเลมไปสองตัวจากการสำรวจดันเจี้ยน และตัดสินใจไม่เข้าไปยุ่งเกี่ยวกับที่นั่นในตอนนี้`
+- ความคิดตัวละคร: ใช้เครื่องหมายขีดกลาง — หรือเอียงตามความเหมาะสม`
     },
     ACADEMIC: {
         name: 'วิชาการ/บทความ',
         desc: 'เหมาะสำหรับบทความวิจัย เอกสารวิชาการ รายงาน เน้นความแม่นยำ ความเป็นทางการ และศัพท์เทคนิค',
-        temperature: 0.1,
-        top_p: 0.85,
-        frequency_penalty: 0.0,
-        presence_penalty: 0.0,
+        temperature: 0.1, top_p: 0.85, frequency_penalty: 0.0, presence_penalty: 0.0,
         prompt: `คุณคือผู้เชี่ยวชาญด้านการแปลเอกสารวิชาการ บทความวิจัย และงานเขียนเชิงวิชาการภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
 📋 กฎการแปล (ต้องปฏิบัติตามอย่างเคร่งครัด):
 1. [ความถูกต้อง] รักษาความหมายเชิงวิชาการอย่างแม่นยำ ห้ามตีความเพิ่มหรือลดทอนเนื้อหา
@@ -463,14 +357,7 @@ const MODE_CONFIG = {
 3. [ศัพท์เทคนิค] รักษาศัพท์เทคนิค/คำย่อภาษาอังกฤษไว้ หากจำเป็นต้องแปล ให้ใช้รูปแบบ "คำแปลไทย (ศัพท์อังกฤษ)"
 4. [โครงสร้าง] รักษาโครงสร้างย่อหน้า หัวข้อ และลำดับตรรกะของต้นฉบับอย่างเคร่งครัด
 5. [รูปแบบ] ห้ามใช้ Markdown, อีโมจิ, หรือสัญลักษณ์พิเศษ ใช้ข้อความธรรมดาและเครื่องหมายวรรคตอนมาตรฐาน
-6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำนำหน้าหรือคำอธิบาย
-🎓 การจัดการเนื้อหาพิเศษ:
-- สูตร/สมการ/ตัวเลข: คงรูปแบบเดิมไว้
-- การอ้างอิง: รักษาโครงสร้างการอ้างอิง (เช่น [1], (Author, Year))
-- ตาราง/รายการ: แปลเนื้อหาในตาราง/รายการอย่างถูกต้อง รักษารูปแบบลำดับ
-✅ ตัวอย่าง:
-ต้นฉบับ: The methodology employed in this study utilizes a mixed-methods approach.
-คำแปล: ระเบียบวิธีวิจัยที่ใช้ในการศึกษานี้ใช้แนวทางแบบผสมผสาน (mixed-methods approach)`
+6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำนำหน้าหรือคำอธิบาย`
     }
 };
 
@@ -482,22 +369,20 @@ let lastTranslatedContext = '';
 let currentInputMode = 'file';
 let currentTranslationMode = 'NOVEL';
 let isLibrariesReady = false;
+let glossaryRows = [];
+let currentJobId = null;
+let chunkTimings = [];
 
 // ==================== INIT ====================
 window.addEventListener('load', () => {
+    initGlossary();
     const checkInterval = setInterval(() => {
         if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
             isLibrariesReady = true;
             clearInterval(checkInterval);
-            console.log('✅ Libraries loaded: mammoth 1.11.0 | pdf.js 3.11.174 | docx 9.6.1');
         }
     }, 100);
-    setTimeout(() => {
-        if (!isLibrariesReady) {
-            console.warn('⚠️ Libraries might not be fully loaded after 15s, proceeding anyway...');
-            isLibrariesReady = true;
-        }
-    }, 15000);
+    setTimeout(() => { isLibrariesReady = true; }, 15000);
 });
 
 // ==================== DOM ====================
@@ -527,6 +412,7 @@ function switchInputTab(tab) {
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('resultGrid').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('resumeBanner').classList.remove('visible');
     clearError();
 }
 
@@ -536,22 +422,15 @@ function updateTextCharCount() {
     document.getElementById('textCharCount').textContent = `${count.toLocaleString()} ตัวอักษร · ${countWords(textInput.value)} คำ`;
 }
 textInput.addEventListener('input', updateTextCharCount);
-
 function pasteFromClipboard() {
-    navigator.clipboard.readText().then(text => {
-        if (text) { textInput.value = text; updateTextCharCount(); }
-    }).catch(() => showError('ไม่สามารถอ่านคลิปบอร์ดได้ กรุณากดวางเอง (Ctrl+V)'));
+    navigator.clipboard.readText().then(text => { if (text) { textInput.value = text; updateTextCharCount(); } }).catch(() => showError('ไม่สามารถอ่านคลิปบอร์ดได้ กรุณากดวางเอง (Ctrl+V)'));
 }
-
 function clearTextInput() {
-    if (confirm('ล้างข้อความทั้งหมดใช่หรือไม่?')) {
-        textInput.value = ''; updateTextCharCount(); textInput.focus();
-    }
+    if (confirm('ล้างข้อความทั้งหมดใช่หรือไม่?')) { textInput.value = ''; updateTextCharCount(); textInput.focus(); }
 }
-
 function useTextInput() {
     const text = textInput.value.trim();
-    if (!text) return showError('กรุณาวางข้อความก่อนกดใช้');
+    if (!text) return showError('กรุณาวางข้อความก่อนกด');
     clearError();
     processExtractedText(text, 'ข้อความที่วาง');
 }
@@ -559,10 +438,7 @@ function useTextInput() {
 // ==================== DRAG & DROP ====================
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
 uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
-uploadZone.addEventListener('drop', e => {
-    e.preventDefault(); uploadZone.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-});
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
 // ==================== FILE HANDLING ====================
@@ -579,6 +455,7 @@ async function handleFile(file) {
     document.getElementById('sourcePanel').style.display = 'none';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('resumeBanner').classList.remove('visible');
     showLoading(ext === 'pdf' ? 'กำลังอ่านไฟล์ PDF...' : 'กำลังอ่านไฟล์...');
     try {
         let text = '';
@@ -595,36 +472,21 @@ async function handleFile(file) {
                 loadingText.textContent = `กำลังอ่านหน้า ${pageNum} จาก ${pdf.numPages}...`;
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
-                let pageLines = [];
-                let currentLine = '';
-                let prevY = null;
-
+                let pageLines = [], currentLine = '', prevY = null;
                 for (const item of textContent.items) {
                     const curY = item.transform ? Math.round(item.transform[5]) : null;
                     if (prevY !== null && curY !== null && Math.abs(curY - prevY) > 4) {
                         if (currentLine.trim()) pageLines.push(currentLine.trim());
                         currentLine = '';
                     }
-
-                    // FIX 1+3: เติม space ระหว่าง text items เพื่อป้องกันคำติดกัน
-                    // ยกเว้น punctuation ท้ายบรรทัด เช่น "word," "word."
-                    const needsSpace =
-                        currentLine.length > 0 &&
-                        !currentLine.endsWith(' ') &&
-                        !/[.,!?)\-]$/.test(currentLine) &&
-                        item.str.length > 0 &&
-                        !item.str.startsWith(' ');
+                    const needsSpace = currentLine.length > 0 && !currentLine.endsWith(' ') && !/[.,!?)\-]$/.test(currentLine) && item.str.length > 0 && !item.str.startsWith(' ');
                     currentLine += (needsSpace ? ' ' : '') + item.str;
-
-                    if (item.hasEOL) {
-                        if (currentLine.trim()) pageLines.push(currentLine.trim());
-                        currentLine = '';
-                    }
+                    if (item.hasEOL) { if (currentLine.trim()) pageLines.push(currentLine.trim()); currentLine = ''; }
                     prevY = curY;
                 }
                 if (currentLine.trim()) pageLines.push(currentLine.trim());
                 fullText.push(pageLines.join('\n').trim());
-                page.cleanup(); // #7: ป้องกัน memory leak
+                page.cleanup();
                 if (pageNum % 5 === 0) await sleep(50);
             }
             text = fullText.join('\n\n').trim();
@@ -632,15 +494,13 @@ async function handleFile(file) {
         hideLoading();
         if (!text) return showError('ไม่พบข้อความในไฟล์นี้ (อาจเป็นไฟล์ภาพหรือป้องกัน)');
         processExtractedText(text, file.name);
-    } catch(err) {
-        hideLoading();
-        showError('ไม่สามารถอ่านไฟล์ได้: ' + err.message);
-    }
+    } catch(err) { hideLoading(); showError('ไม่สามารถอ่านไฟล์ได้: ' + err.message); }
 }
 
 function processExtractedText(text, sourceName) {
     extractedText = text;
     paragraphs = extractedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    currentJobId = generateJobId(text);
     const preview = extractedText.slice(0, 2000) + (extractedText.length > 2000 ? '\n\n[... แสดง 2000 ตัวอักษรแรก ...]' : '');
     document.getElementById('sourceText').textContent = preview;
     document.getElementById('charCount').textContent = `${extractedText.length.toLocaleString()} ตัวอักษร · ${paragraphs.length} ย่อหน้า`;
@@ -649,6 +509,7 @@ function processExtractedText(text, sourceName) {
     document.getElementById('sourcePanel').style.display = 'block';
     document.getElementById('controlPanel').style.display = 'block';
     resetBtn.style.display = 'none';
+    checkForCheckpoint();
     document.getElementById('sourcePanel').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -658,10 +519,8 @@ function showError(msg) { const box = document.getElementById('errorBox'); box.t
 function clearError() { document.getElementById('errorBox').classList.remove('visible'); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-// FIX 4: ตัด context ที่ขอบ sentence ไม่ตัดกลาง
 function getTrailingContext(text, maxChars = 400) {
     if (!text) return '';
-    // แยกตาม sentence endings ทั้งภาษาไทยและอังกฤษ
     const sentences = text.match(/[^\n。.!?]+[。.!?\n]+/g) || [];
     let result = '';
     for (let i = sentences.length - 1; i >= 0; i--) {
@@ -671,11 +530,159 @@ function getTrailingContext(text, maxChars = 400) {
     return result.trim() || text.slice(-maxChars);
 }
 
+function generateJobId(text) {
+    // simple hash for checkpoint keying
+    let hash = 0;
+    const sample = text.slice(0, 500) + text.length;
+    for (let i = 0; i < sample.length; i++) { hash = ((hash << 5) - hash) + sample.charCodeAt(i); hash |= 0; }
+    return 'job_' + Math.abs(hash).toString(36);
+}
+
+function formatEta(ms) {
+    if (ms < 60000) return `ประมาณ ${Math.ceil(ms / 1000)} วินาที`;
+    return `ประมาณ ${Math.ceil(ms / 60000)} นาที`;
+}
+
+// ==================== CHECKPOINT SYSTEM ====================
+function getCheckpointKey(jobId) { return CHECKPOINT_KEY_PREFIX + jobId; }
+
+function saveCheckpoint(jobId, chunks, completedIndex, parts, mode) {
+    try {
+        const data = {
+            jobId, mode, totalChunks: chunks.length,
+            completedIndex, parts,
+            savedAt: Date.now(),
+            sourceName: document.getElementById('fileName').textContent
+        };
+        sessionStorage.setItem(getCheckpointKey(jobId), JSON.stringify(data));
+    } catch(e) { console.warn('Checkpoint save failed:', e); }
+}
+
+function loadCheckpoint(jobId) {
+    try {
+        const raw = sessionStorage.getItem(getCheckpointKey(jobId));
+        return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+}
+
+function clearCheckpoint(jobId) {
+    try { sessionStorage.removeItem(getCheckpointKey(jobId)); } catch(e) {}
+}
+
+function checkForCheckpoint() {
+    if (!currentJobId) return;
+    const cp = loadCheckpoint(currentJobId);
+    if (!cp || cp.completedIndex <= 0) return;
+    const pct = Math.round((cp.completedIndex / cp.totalChunks) * 100);
+    const ago = Math.round((Date.now() - cp.savedAt) / 60000);
+    document.getElementById('resumeInfo').textContent =
+        `แปลไปแล้ว ${cp.completedIndex} จาก ${cp.totalChunks} chunk (${pct}%) · บันทึกเมื่อ ${ago < 1 ? 'เมื่อกี้' : ago + ' นาทีที่แล้ว'}`;
+    document.getElementById('resumeBanner').classList.add('visible');
+}
+
+async function resumeTranslation() {
+    if (!currentJobId) return;
+    const cp = loadCheckpoint(currentJobId);
+    if (!cp) return;
+    document.getElementById('resumeBanner').classList.remove('visible');
+    setMode(cp.mode || currentTranslationMode);
+    translatedParts = cp.parts || [];
+    await runTranslation(cp.completedIndex);
+}
+
+function discardCheckpoint() {
+    if (currentJobId) clearCheckpoint(currentJobId);
+    document.getElementById('resumeBanner').classList.remove('visible');
+}
+
+// ==================== GLOSSARY ====================
+function initGlossary() {
+    try {
+        const saved = localStorage.getItem('translator_glossary');
+        if (saved) { glossaryRows = JSON.parse(saved); renderGlossaryRows(); }
+    } catch(e) {}
+}
+
+function saveGlossary() {
+    try { localStorage.setItem('translator_glossary', JSON.stringify(glossaryRows)); } catch(e) {}
+}
+
+function toggleGlossary() {
+    const body = document.getElementById('glossaryBody');
+    const icon = document.getElementById('glossaryToggleIcon');
+    body.classList.toggle('open');
+    icon.classList.toggle('open');
+}
+
+function addGlossaryRow(en = '', th = '') {
+    glossaryRows.push({ id: Date.now(), en, th });
+    renderGlossaryRows();
+    if (en === '') {
+        const rows = document.querySelectorAll('#glossaryRows tr');
+        const lastInput = rows[rows.length - 1]?.querySelector('input[data-field="en"]');
+        if (lastInput) lastInput.focus();
+    }
+}
+
+function deleteGlossaryRow(id) {
+    glossaryRows = glossaryRows.filter(r => r.id !== id);
+    renderGlossaryRows();
+    saveGlossary();
+}
+
+function updateGlossaryRow(id, field, value) {
+    const row = glossaryRows.find(r => r.id === id);
+    if (row) { row[field] = value; saveGlossary(); updateGlossaryBadge(); }
+}
+
+function clearGlossary() {
+    if (glossaryRows.length === 0) return;
+    if (confirm('ล้าง glossary ทั้งหมดใช่หรือไม่?')) {
+        glossaryRows = [];
+        renderGlossaryRows();
+        saveGlossary();
+    }
+}
+
+function renderGlossaryRows() {
+    const tbody = document.getElementById('glossaryRows');
+    tbody.innerHTML = '';
+    glossaryRows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input class="glossary-input" data-field="en" value="${escHtml(row.en)}" placeholder="เช่น Aria, Aldenmoor" /></td>
+            <td><input class="glossary-input" data-field="th" value="${escHtml(row.th)}" placeholder="เช่น อาเรีย, อัลเดนมัวร์" /></td>
+            <td><button class="glossary-del-btn" title="ลบ">×</button></td>`;
+        tr.querySelector('[data-field="en"]').addEventListener('input', e => updateGlossaryRow(row.id, 'en', e.target.value));
+        tr.querySelector('[data-field="th"]').addEventListener('input', e => updateGlossaryRow(row.id, 'th', e.target.value));
+        tr.querySelector('.glossary-del-btn').addEventListener('click', () => deleteGlossaryRow(row.id));
+        tbody.appendChild(tr);
+    });
+    updateGlossaryBadge();
+}
+
+function updateGlossaryBadge() {
+    const active = glossaryRows.filter(r => r.en.trim() && r.th.trim());
+    const badge = document.getElementById('glossaryBadge');
+    const count = document.getElementById('glossaryCount');
+    count.textContent = `${active.length} คำ`;
+    if (active.length > 0) { badge.textContent = active.length; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function buildGlossaryPromptBlock() {
+    const active = glossaryRows.filter(r => r.en.trim() && r.th.trim());
+    if (active.length === 0) return '';
+    const lines = active.map(r => `- ${r.en.trim()} → ${r.th.trim()}`).join('\n');
+    return `\n\n📚 พจนานุกรมคำศัพท์เฉพาะ (ต้องใช้คำแปลตามนี้เท่านั้น ห้ามดัดแปลง):\n${lines}`;
+}
+
 // ==================== CHUNKING ====================
 function buildNovelChunks(paragraphs, maxWords) {
     const chunks = [];
-    let current = [];
-    let currentWords = 0;
+    let current = [], currentWords = 0;
     for (let i = 0; i < paragraphs.length; i++) {
         const para = paragraphs[i];
         const wordCount = countWords(para);
@@ -685,16 +692,12 @@ function buildNovelChunks(paragraphs, maxWords) {
             let subChunk = [], subWords = 0;
             for (const sent of sentences) {
                 const sw = countWords(sent);
-                if (subWords + sw > maxWords && subChunk.length > 0) {
-                    chunks.push({ text: subChunk.join(' ') }); subChunk = []; subWords = 0;
-                }
+                if (subWords + sw > maxWords && subChunk.length > 0) { chunks.push({ text: subChunk.join(' ') }); subChunk = []; subWords = 0; }
                 subChunk.push(sent); subWords += sw;
             }
             if (subChunk.length > 0) chunks.push({ text: subChunk.join(' ') });
         } else {
-            if (currentWords + wordCount > maxWords && current.length > 0) {
-                chunks.push({ text: current.join('\n\n') }); current = []; currentWords = 0;
-            }
+            if (currentWords + wordCount > maxWords && current.length > 0) { chunks.push({ text: current.join('\n\n') }); current = []; currentWords = 0; }
             current.push(para); currentWords += wordCount;
         }
     }
@@ -705,38 +708,23 @@ function buildNovelChunks(paragraphs, maxWords) {
 // ==================== VALIDATION ====================
 function validateTranslation(original, translated) {
     const issues = [];
-
-    // #2: ข้ามเช็ค Thai ถ้า original เป็นตัวเลข/code/citation ที่ไม่มี Latin
-    if (!/[ก-๙]/.test(translated) && /[a-zA-Z]/.test(original)) {
-        issues.push('ไม่พบข้อความภาษาไทย');
-    }
-
-    // FIX 2: ตรวจเฉพาะ Markdown token จริง ๆ ไม่รวม ()
-    if (/[*#`>|]/.test(translated)) {
-        issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
-    }
-
-    // FIX 2: ข้ามการเช็ค ratio สำหรับข้อความสั้น (< 60 chars) เพราะ expansion ไทยสูงมาก
+    if (!/[ก-๙]/.test(translated) && /[a-zA-Z]/.test(original)) issues.push('ไม่พบข้อความภาษาไทย');
+    if (/[*#`>|]/.test(translated)) issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
     if (original.length >= 60) {
         const ratio = translated.length / original.length;
         const maxRatio = currentTranslationMode === 'ACADEMIC' ? 5.0 : 4.5;
-        if (ratio < 0.25 || ratio > maxRatio) {
-            issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
-        }
+        if (ratio < 0.25 || ratio > maxRatio) issues.push(`ความยาวไม่สมเหตุสมผล (${ratio.toFixed(2)}x)`);
     }
-
-    // ตรวจ system prompt echo
     const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation'];
-    if (sysPhrases.some(p => translated.toLowerCase().includes(p))) {
-        issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
-    }
-
+    if (sysPhrases.some(p => translated.toLowerCase().includes(p))) issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
     return { valid: issues.length === 0, issues };
 }
 
 // ==================== API TRANSLATION ====================
 async function translateChunk(text, context = '', retries = 2) {
     const config = MODE_CONFIG[currentTranslationMode];
+    // Inject glossary into system prompt every call
+    const systemPrompt = config.prompt + buildGlossaryPromptBlock();
     const userPrompt = context
         ? `บริบทก่อนหน้า:\n${context}\n\n---\n\nข้อความต่อไปที่ต้องแปล:\n${text}`
         : `ข้อความที่ต้องแปล:\n${text}`;
@@ -748,12 +736,10 @@ async function translateChunk(text, context = '', retries = 2) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     max_tokens: 2048,
-                    temperature: config.temperature,
-                    top_p: config.top_p,
-                    frequency_penalty: config.frequency_penalty,
-                    presence_penalty: config.presence_penalty,
+                    temperature: config.temperature, top_p: config.top_p,
+                    frequency_penalty: config.frequency_penalty, presence_penalty: config.presence_penalty,
                     messages: [
-                        { role: 'system', content: config.prompt },
+                        { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ]
                 })
@@ -761,37 +747,29 @@ async function translateChunk(text, context = '', retries = 2) {
 
             if (!response.ok) {
                 const errText = await response.text().catch(() => '');
-                console.warn(`HTTP ${response.status}: ${errText}`);
                 if (attempt < retries) { await sleep(RETRY_DELAY * (attempt + 1)); continue; }
                 throw new Error(`API error: HTTP ${response.status}`);
             }
 
             let data;
             try { data = JSON.parse(await response.text()); }
-            catch (e) { if (attempt < retries) { await sleep(RETRY_DELAY); continue; } throw new Error('Invalid JSON response'); }
+            catch(e) { if (attempt < retries) { await sleep(RETRY_DELAY); continue; } throw new Error('Invalid JSON response'); }
 
             const content = data.choices?.[0]?.message?.content;
             if (!content) {
-                if (data.error) console.warn('API error:', data.error);
                 if (attempt < retries) { await sleep(RETRY_DELAY); continue; }
                 throw new Error('Empty response from API');
             }
 
             const result = content.trim();
             const validation = validateTranslation(text, result);
-
             if (!validation.valid && attempt < retries) {
-                // #5: retry เฉพาะกรณีไม่มีภาษาไทยเลย (model output ผิดจริง)
-                // กรณีอื่น (ratio, markdown) → ยอมรับผลและไม่เสีย API call
-                if (validation.issues.includes('ไม่พบข้อความภาษาไทย')) {
-                    console.warn('No Thai text found, retrying:', validation.issues);
-                    await sleep(RETRY_DELAY);
-                    continue;
-                }
-                console.info('Non-critical validation issues, accepting result:', validation.issues);
+                if (validation.issues.includes('ไม่พบข้อความภาษาไทย')) { await sleep(RETRY_DELAY); continue; }
+                console.info('Non-critical validation, accepting:', validation.issues);
             }
             return result;
-        } catch (err) {
+
+        } catch(err) {
             console.warn(`Attempt ${attempt + 1} failed:`, err.message);
             if (attempt === retries) throw err;
             await sleep(RETRY_DELAY * (attempt + 1));
@@ -801,11 +779,7 @@ async function translateChunk(text, context = '', retries = 2) {
 }
 
 // ==================== MAIN PROCESS ====================
-translateBtn.addEventListener('click', async () => {
-    if (!extractedText || paragraphs.length === 0) {
-        showError('กรุณาโหลดไฟล์หรือวางข้อความก่อนกดแปล');
-        return;
-    }
+async function runTranslation(startFromIndex = 0) {
     translateBtn.disabled = true;
     resetBtn.style.display = 'none';
     document.getElementById('spinner').classList.add('visible');
@@ -813,43 +787,69 @@ translateBtn.addEventListener('click', async () => {
     clearError();
 
     const chunks = buildNovelChunks(paragraphs, MAX_WORDS);
-    console.log(`📦 Split into ${chunks.length} chunks for translation (${currentTranslationMode})`);
-
     const progressWrap = document.getElementById('progressWrap');
     const progressFill = document.getElementById('progressFill');
     const progressPct = document.getElementById('progressPct');
     const progressStatus = document.getElementById('progressStatus');
+    const progressEta = document.getElementById('progressEta');
 
     progressWrap.classList.add('visible');
     document.getElementById('resultGrid').style.display = 'grid';
     document.getElementById('sourceDisplay').textContent = extractedText;
-    document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังเริ่มต้นการแปล...</div>';
 
-    translatedParts = [];
-    lastTranslatedContext = '';
-    let successCount = 0;
+    if (startFromIndex === 0) {
+        translatedParts = [];
+        document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังเริ่มต้นการแปล...</div>';
+    } else {
+        document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
+    }
+
+    lastTranslatedContext = translatedParts.length > 0 ? translatedParts[translatedParts.length - 1] : '';
+    chunkTimings = [];
+    let successCount = startFromIndex;
 
     try {
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            const pct = Math.round(((i) / chunks.length) * 100);
+        for (let i = startFromIndex; i < chunks.length; i++) {
+            const chunkStart = Date.now();
+            const pct = Math.round((i / chunks.length) * 100);
             progressFill.style.width = pct + '%';
             progressPct.textContent = pct + '%';
             progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
 
-            if (i > 0) await sleep(RATE_LIMIT_DELAY);
+            if (i > startFromIndex) await sleep(RATE_LIMIT_DELAY);
 
-            // #1: ส่ง context ตรง ๆ ไม่ต้องห่อ label ซ้ำ (label อยู่ใน translateChunk แล้ว)
-            const prevContext = lastTranslatedContext
-                ? getTrailingContext(lastTranslatedContext)
-                : '';
+            const prevContext = lastTranslatedContext ? getTrailingContext(lastTranslatedContext) : '';
 
-            const translated = await translateChunk(chunk.text, prevContext);
+            let translated;
+            try {
+                translated = await translateChunk(chunks[i].text, prevContext);
+            } catch(chunkErr) {
+                // === PARTIAL FAILURE: save checkpoint then surface error ===
+                saveCheckpoint(currentJobId, chunks, i, translatedParts, currentTranslationMode);
+                const partialText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
+                if (partialText) document.getElementById('translationDisplay').textContent = partialText;
+                progressStatus.textContent = `⚠️ หยุดที่ chunk ${i + 1} — บันทึกแล้ว ${successCount} chunk`;
+                progressStatus.style.color = 'var(--warn)';
+                progressEta.textContent = '';
+                showError(`แปลล้มเหลวที่ chunk ${i + 1}/${chunks.length}: ${chunkErr.message} — กดรีเฟรชหน้าเพื่อแปลต่อจากจุดนี้`);
+                throw chunkErr; // bubble to finally
+            }
+
             translatedParts.push(translated);
             lastTranslatedContext = translated;
             successCount++;
 
-            // #8: อัปเดต UI ทุก 2 chunks → ลด reflow บน chunk จำนวนมาก
+            // Record timing for ETA
+            chunkTimings.push(Date.now() - chunkStart);
+            const avgTime = chunkTimings.reduce((a, b) => a + b, 0) / chunkTimings.length;
+            const remaining = (chunks.length - i - 1) * avgTime;
+            if (remaining > 0) progressEta.textContent = formatEta(remaining);
+
+            // Autosave checkpoint every 3 chunks
+            if ((i + 1) % 3 === 0) {
+                saveCheckpoint(currentJobId, chunks, i + 1, translatedParts, currentTranslationMode);
+            }
+
             if (i % 2 === 0 || i === chunks.length - 1) {
                 document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
             }
@@ -857,138 +857,112 @@ translateBtn.addEventListener('click', async () => {
 
         const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
         document.getElementById('translationDisplay').textContent = finalText;
-
         progressFill.style.width = '100%';
         progressPct.textContent = '100%';
+        progressEta.textContent = '';
+
         if (successCount === chunks.length) {
-            progressStatus.textContent = `✅ แปลเสร็จสมบูรณ์ ${translatedParts.length} ชิ้น`;
+            progressStatus.textContent = `✅ แปลเสร็จสมบูรณ์ ${translatedParts.length} chunk`;
             progressStatus.style.color = 'var(--success)';
+            clearCheckpoint(currentJobId); // job done, clear checkpoint
         } else {
-            progressStatus.textContent = `⚠️ แปลเสร็จ ${successCount} จาก ${chunks.length} ชิ้น`;
+            progressStatus.textContent = `⚠️ แปลเสร็จ ${successCount} จาก ${chunks.length} chunk`;
             progressStatus.style.color = 'var(--accent)';
         }
-    } catch (err) {
-        showError(`เกิดข้อผิดพลาด: ${err.message}`);
-        progressStatus.textContent = '❌ หยุดเนื่องจากข้อผิดพลาด';
-        progressStatus.style.color = 'var(--error)';
+
+    } catch(err) {
+        // error already shown above if chunk-level; show generic if unexpected
+        if (!err.message.includes('Translation failed')) showError(`เกิดข้อผิดพลาด: ${err.message}`);
     } finally {
         translateBtn.disabled = false;
         resetBtn.style.display = 'inline-flex';
         document.getElementById('spinner').classList.remove('visible');
         document.getElementById('translateIcon').style.display = '';
     }
+}
+
+translateBtn.addEventListener('click', async () => {
+    if (!extractedText || paragraphs.length === 0) return showError('กรุณาโหลดไฟล์หรือวางข้อความก่อนกดแปล');
+    document.getElementById('resumeBanner').classList.remove('visible');
+    await runTranslation(0);
 });
 
 // ==================== RESET ====================
 resetBtn.addEventListener('click', () => {
-    extractedText = ''; paragraphs = []; translatedParts = []; lastTranslatedContext = '';
+    if (currentJobId) clearCheckpoint(currentJobId);
+    extractedText = ''; paragraphs = []; translatedParts = []; lastTranslatedContext = ''; currentJobId = null; chunkTimings = [];
     document.getElementById('fileChip').style.display = 'none';
     document.getElementById('fileName').textContent = '—';
     document.getElementById('sourcePanel').style.display = 'none';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('progressStatus').style.color = '';
     document.getElementById('resultGrid').style.display = 'none';
     document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div>คำแปลจะปรากฏที่นี่</div>';
+    document.getElementById('resumeBanner').classList.remove('visible');
     fileInput.value = ''; textInput.value = ''; updateTextCharCount();
     translateBtn.disabled = false; resetBtn.style.display = 'none';
     document.getElementById('spinner').classList.remove('visible');
     document.getElementById('translateIcon').style.display = '';
-    clearError();
-    switchInputTab('file');
+    clearError(); switchInputTab('file');
 });
 
 // ==================== EXPORT ====================
 async function exportDoc(mode, evt) {
-    if (!window.docx) {
-        showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ — กรุณารอสักครู่แล้วลองใหม่');
-        return;
-    }
+    if (!window.docx) return showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ');
     const required = ['Document','Packer','Paragraph','TextRun','Table','TableRow','TableCell','WidthType','HeadingLevel','ShadingType','BorderStyle'];
     const missing = required.filter(k => !window.docx[k]);
-    if (missing.length > 0) {
-        showError('โหลด library ไม่สมบูรณ์ (ขาด: ' + missing.join(', ') + ') — กรุณารีเฟรชหน้าเว็บ');
-        return;
-    }
+    if (missing.length > 0) return showError('โหลด library ไม่สมบูรณ์ (ขาด: ' + missing.join(', ') + ') — กรุณารีเฟรช');
 
     const sourceText = document.getElementById('sourceDisplay').textContent;
     const translationText = document.getElementById('translationDisplay').textContent;
     const baseName = (document.getElementById('fileName').textContent || 'document').replace(/\.[^.]+$/, '');
-
-    const btn = evt && evt.currentTarget ? evt.currentTarget : (evt && evt.target ? evt.target : null);
+    const btn = evt?.currentTarget || evt?.target || null;
     let origText = '';
     if (btn) { origText = btn.textContent; btn.textContent = 'กำลังสร้าง...'; btn.disabled = true; }
 
     try {
-        const {
-            Document, Packer, Paragraph, TextRun,
-            Table, TableRow, TableCell,
-            WidthType, HeadingLevel,
-            ShadingType, BorderStyle
-        } = window.docx;
-
+        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, ShadingType, BorderStyle } = window.docx;
         const createParagraph = (text, isEnglish = false, headingLevel = null) => {
-            const opts = {
-                children: [new TextRun({ text, font: isEnglish ? 'Calibri' : 'Sarabun', size: headingLevel ? 28 : 24, bold: !!headingLevel })],
-                spacing: { after: 200 },
-            };
+            const opts = { children: [new TextRun({ text, font: isEnglish ? 'Calibri' : 'Sarabun', size: headingLevel ? 28 : 24, bold: !!headingLevel })], spacing: { after: 200 } };
             if (headingLevel) opts.heading = headingLevel;
             return new Paragraph(opts);
         };
-
-        const textToParagraphs = (text, isEnglish) =>
-            text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => createParagraph(p, isEnglish));
-
+        const textToParagraphs = (text, isEnglish) => text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => createParagraph(p, isEnglish));
         const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
         const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
-        const HALF_WIDTH = 4680;
+        const HALF = 4680;
 
         let doc;
-
         if (mode === 'source') {
             doc = new Document({ sections: [{ children: [createParagraph('ต้นฉบับภาษาอังกฤษ', true, HeadingLevel.HEADING_1), ...textToParagraphs(sourceText, true)] }] });
         } else if (mode === 'translation') {
             doc = new Document({ sections: [{ children: [createParagraph('คำแปลภาษาไทย', false, HeadingLevel.HEADING_1), ...textToParagraphs(translationText, false)] }] });
         } else {
-            const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
-            const thParas  = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
-            const maxLen   = Math.max(srcParas.length, thParas.length);
-
-            const headerRow = new TableRow({
-                tableHeader: true,
-                children: [
-                    new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, shading: { fill: 'D6E4F7', type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph('English (ต้นฉบับ)', true, HeadingLevel.HEADING_3)] }),
-                    new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, shading: { fill: 'FEF0E6', type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph('ภาษาไทย (คำแปล)', false, HeadingLevel.HEADING_3)] })
-                ]
-            });
-
+            const srcP = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+            const thP = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+            const maxLen = Math.max(srcP.length, thP.length);
+            const headerRow = new TableRow({ tableHeader: true, children: [
+                new TableCell({ borders: cellBorders, width: { size: HALF, type: WidthType.DXA }, shading: { fill: 'D6E4F7', type: ShadingType.CLEAR }, margins: { top:80,bottom:80,left:120,right:120 }, children: [createParagraph('English (ต้นฉบับ)', true, HeadingLevel.HEADING_3)] }),
+                new TableCell({ borders: cellBorders, width: { size: HALF, type: WidthType.DXA }, shading: { fill: 'FEF0E6', type: ShadingType.CLEAR }, margins: { top:80,bottom:80,left:120,right:120 }, children: [createParagraph('ภาษาไทย (คำแปล)', false, HeadingLevel.HEADING_3)] })
+            ]});
             const dataRows = [];
             for (let i = 0; i < maxLen; i++) {
-                dataRows.push(new TableRow({
-                    children: [
-                        new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph(srcParas[i] || '', true)] }),
-                        new TableCell({ borders: cellBorders, width: { size: HALF_WIDTH, type: WidthType.DXA }, margins: { top: 80, bottom: 80, left: 120, right: 120 }, children: [createParagraph(thParas[i] || '', false)] })
-                    ]
-                }));
+                dataRows.push(new TableRow({ children: [
+                    new TableCell({ borders: cellBorders, width: { size: HALF, type: WidthType.DXA }, margins: { top:80,bottom:80,left:120,right:120 }, children: [createParagraph(srcP[i] || '', true)] }),
+                    new TableCell({ borders: cellBorders, width: { size: HALF, type: WidthType.DXA }, margins: { top:80,bottom:80,left:120,right:120 }, children: [createParagraph(thP[i] || '', false)] })
+                ]}));
             }
-
-            doc = new Document({
-                sections: [{
-                    children: [
-                        createParagraph('เปรียบเทียบต้นฉบับและคำแปล', false, HeadingLevel.HEADING_1),
-                        new Table({ width: { size: HALF_WIDTH * 2, type: WidthType.DXA }, columnWidths: [HALF_WIDTH, HALF_WIDTH], rows: [headerRow, ...dataRows] })
-                    ]
-                }]
-            });
+            doc = new Document({ sections: [{ children: [createParagraph('เปรียบเทียบต้นฉบับและคำแปล', false, HeadingLevel.HEADING_1), new Table({ width: { size: HALF*2, type: WidthType.DXA }, columnWidths: [HALF, HALF], rows: [headerRow, ...dataRows] })] }] });
         }
 
         const blob = await Packer.toBlob(doc);
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
         a.href = url; a.download = `${baseName}_${mode}.docx`;
         document.body.appendChild(a); a.click();
         document.body.removeChild(a); URL.revokeObjectURL(url);
-
-    } catch (err) {
+    } catch(err) {
         console.error('Export error:', err);
         showError('เกิดข้อผิดพลาดขณะสร้างไฟล์: ' + err.message);
     } finally {
@@ -996,21 +970,14 @@ async function exportDoc(mode, evt) {
     }
 }
 
-// ==================== COPY (FIX 5: ใช้ btn parameter แทน global event) ====================
+// ==================== COPY ====================
 function copyText(id, btn = null) {
     const el = document.getElementById(id);
     if (!el) return;
     const text = el.textContent;
-    if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) {
-        return showError('ยังไม่มีเนื้อหาให้คัดลอก');
-    }
+    if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) return showError('ยังไม่มีเนื้อหาให้คัดลอก');
     navigator.clipboard.writeText(text).then(() => {
-        if (btn) {
-            const orig = btn.textContent;
-            btn.textContent = '✓ คัดลอกแล้ว';
-            btn.style.color = 'var(--success)';
-            setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
-        }
+        if (btn) { const orig = btn.textContent; btn.textContent = '✓ คัดลอกแล้ว'; btn.style.color = 'var(--success)'; setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000); }
     }).catch(() => showError('ไม่สามารถคัดลอกได้'));
 }
 </script>
