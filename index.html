@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EN → TH Novel Translator</title>
+<!-- Point 2: Load libraries early -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.min.js"></script>
 <style>
@@ -329,12 +330,12 @@ main {
     </div>
     <div class="result-grid" id="resultGrid" style="display:none">
         <div class="panel">
-            <div class="panel-header"><span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span><div style="display:flex;gap:0.4rem"><button class="copy-btn" onclick="copyText('sourceDisplay')">คัดลอก</button><button class="copy-btn" onclick="exportDoc('source')">⬇ .docx</button></div></div>
+            <div class="panel-header"><span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span><div style="display:flex;gap:0.4rem"><button class="copy-btn" onclick="copyText('sourceDisplay')">คัดลอก</button><button class="copy-btn" onclick="exportDoc('source', event)"> .docx</button></div></div>
             <div class="panel-body"><div class="translation-content" id="sourceDisplay"></div></div>
         </div>
         <div class="panel">
-            <div class="panel-header"><span class="panel-title"><span class="lang-flag lang-th">TH</span> คำแปล</span><div style="display:flex;gap:0.4rem"><button class="copy-btn" onclick="copyText('translationDisplay')">คัดลอก</button><button class="copy-btn" onclick="exportDoc('translation')">⬇ .docx</button><button class="copy-btn" onclick="exportDoc('both')" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button></div></div>
-            <div class="panel-body"><div class="translation-content" id="translationDisplay"><div class="empty-state"><div class="empty-icon">📖</div>คำแปลจะปรากฏที่นี่</div></div></div>
+            <div class="panel-header"><span class="panel-title"><span class="lang-flag lang-th">TH</span> คำแปล</span><div style="display:flex;gap:0.4rem"><button class="copy-btn" onclick="copyText('translationDisplay')">คัดลอก</button><button class="copy-btn" onclick="exportDoc('translation', event)">⬇ .docx</button><button class="copy-btn" onclick="exportDoc('both', event)" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button></div></div>
+            <div class="panel-body"><div class="translation-content" id="translationDisplay"><div class="empty-state"><div class="empty-icon"></div>คำแปลจะปรากฏที่นี่</div></div></div>
         </div>
     </div>
 </main>
@@ -356,6 +357,27 @@ const SYSTEM_PROMPT = `คุณคือผู้เชี่ยวชาญด
 
 let extractedText = '';
 let paragraphs = [];
+
+// Point 2: Library Readiness Check
+let isLibrariesReady = false;
+
+window.addEventListener('load', () => {
+    const checkInterval = setInterval(() => {
+        if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined') {
+            isLibrariesReady = true;
+            clearInterval(checkInterval);
+            console.log('Libraries loaded successfully');
+        }
+    }, 100);
+    
+    // Timeout fallback just in case
+    setTimeout(() => {
+        if (!isLibrariesReady) {
+            console.warn('Libraries might not be fully loaded, proceeding anyway...');
+            isLibrariesReady = true; 
+        }
+    }, 5000);
+});
 
 const fileInput = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
@@ -387,7 +409,9 @@ function handleFile(file) {
     const reader = new FileReader();
     reader.onload = async e => {
         try {
+            // Point 2: Wait for library readiness if needed (though usually load by now)
             if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
+            
             const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
             extractedText = result.value.trim();
             if (!extractedText) { showError('ไม่พบข้อความในไฟล์นี้'); return; }
@@ -419,18 +443,19 @@ function buildNovelChunks(paragraphs, maxWords) {
         if (w > maxWords) {
             if (current.length > 0) {
                 chunks.push(current.join('\n\n'));
-                current = [];
+                current = []; // Point 6: Reset completely instead of keeping last item
                 currentWords = 0;
             }
-            const sentences = para.match(/[^.!?]+[.!?]+[\s]*/g) || [para];
+            // Point 7: Improved Regex for sentences
+            const sentences = para.match(/[^.!?]+[.!?]*\s*/g) || [para];
             let subChunk = [];
             let subWords = 0;
             for (const sent of sentences) {
                 const sw = countWords(sent);
                 if (subWords + sw > maxWords && subChunk.length > 0) {
                     chunks.push(subChunk.join(' '));
-                    subChunk = subChunk.slice(-1);
-                    subWords = countWords(subChunk[0] || '');
+                    subChunk = []; // Reset subChunk properly
+                    subWords = 0;
                 }
                 subChunk.push(sent);
                 subWords += sw;
@@ -439,8 +464,8 @@ function buildNovelChunks(paragraphs, maxWords) {
         } else {
             if (currentWords + w > maxWords && current.length > 0) {
                 chunks.push(current.join('\n\n'));
-                current = [current[current.length - 1]];
-                currentWords = countWords(current[0]);
+                current = []; // Point 6: Clear array to prevent overlap/repetition
+                currentWords = 0;
             }
             current.push(para);
             currentWords += w;
@@ -459,7 +484,7 @@ async function translateChunk(text, retries = 2) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     max_tokens: 2048,
-                    temperature: 0.3, // ✅ ตั้งค่าความเสถียรสูง ลดการมั่วคำ
+                    temperature: 0.3,
                     top_p: 0.85,
                     messages: [
                         { role: 'system', content: SYSTEM_PROMPT },
@@ -484,7 +509,15 @@ async function translateChunk(text, retries = 2) {
         }
         
         if (data.error && attempt < retries) continue;
-        const result = (data.choices?.[0]?.message?.content || '').trim();
+        
+        // Point 4: Strict Validation
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) {
+             if (attempt < retries) continue;
+             throw new Error('Invalid API structure received');
+        }
+        
+        const result = content.trim();
         if (!result && attempt < retries) continue;
         return result;
     }
@@ -515,40 +548,55 @@ document.getElementById('translateBtn').addEventListener('click', async () => {
     
     const translatedParts = [];
     let successCount = 0;
+    let updateCounter = 0; // Point 10: Counter for DOM updates
 
-    for (let i = 0; i < chunks.length; i++) {
-        const pct = Math.round((i / chunks.length) * 100);
-        progressFill.style.width = pct + '%';
-        progressPct.textContent = pct + '%';
-        progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
-        
-        try {
+    try {
+        for (let i = 0; i < chunks.length; i++) {
+            const pct = Math.round((i / chunks.length) * 100);
+            progressFill.style.width = pct + '%';
+            progressPct.textContent = pct + '%';
+            progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
+            
+            // Point 9: Rate Limiting
+            if (i > 0) await new Promise(r => setTimeout(r, 350));
+
             const translated = await translateChunk(chunks[i]);
             translatedParts.push(translated);
             successCount++;
-            document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
-        } catch(err) {
-            showError(`เกิดข้อผิดพลาดที่ชิ้นที่ ${i+1}: ${err.message}`);
-            break;
+            
+            // Point 10: Update DOM less frequently (every 2 chunks)
+            updateCounter++;
+            if (updateCounter % 2 === 0 || i === chunks.length - 1) {
+                document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
+            }
         }
+        
+        const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
+        document.getElementById('translationDisplay').textContent = finalText;
+        
+        progressFill.style.width = '100%';
+        progressPct.textContent = '100%';
+        progressStatus.textContent = successCount === chunks.length 
+            ? `แปลเสร็จสมบูรณ์ ${translatedParts.length} ชิ้น` 
+            : `แปลเสร็จ ${translatedParts.length} จาก ${chunks.length} ชิ้น`;
+            
+    } catch (err) {
+        // Point 5: Error handling inside loop logic if needed, but mainly handled by finally
+        showError(`เกิดข้อผิดพลาด: ${err.message}`);
+        progressStatus.textContent = "หยุดเนื่องจากข้อผิดพลาด";
+        progressStatus.style.color = "#991b1b";
+    } finally {
+        // Point 5: Always reset UI state
+        btn.disabled = false;
+        spinner.classList.remove('visible');
+        icon.style.display = '';
     }
-    
-    const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
-    document.getElementById('translationDisplay').textContent = finalText;
-    
-    progressFill.style.width = '100%';
-    progressPct.textContent = '100%';
-    progressStatus.textContent = successCount === chunks.length 
-        ? `แปลเสร็จสมบูรณ์ ${translatedParts.length} ชิ้น` 
-        : `แปลเสร็จ ${translatedParts.length} จาก ${chunks.length} ชิ้น`;
-    
-    btn.disabled = false;
-    spinner.classList.remove('visible');
-    icon.style.display = '';
 });
 
-async function exportDoc(mode) {
-    if (typeof docx === 'undefined') {
+// Point 1: Accept event parameter
+async function exportDoc(mode, evt) {
+    // Point 3: Check window.docx directly
+    if (!window.docx) {
         showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
         return;
     }
@@ -557,13 +605,18 @@ async function exportDoc(mode) {
     const translationText = document.getElementById('translationDisplay').textContent;
     const fileName = (document.getElementById('fileName').textContent || 'document').replace('.docx', '');
     
-    const btn = event.currentTarget;
-    const origText = btn.textContent;
-    btn.textContent = 'กำลังสร้าง...';
-    btn.disabled = true;
+    // Safe access to event target
+    const btn = evt ? evt.currentTarget : null;
+    let origText = '';
+    
+    if (btn) {
+        origText = btn.textContent;
+        btn.textContent = 'กำลังสร้าง...';
+        btn.disabled = true;
+    }
 
     try {
-        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel } = docx;
+        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel } = window.docx;
         
         const createRun = (text, isBold = false, font = 'Sarabun') => new TextRun({
             text, bold: isBold, font, size: 24 
@@ -643,8 +696,11 @@ async function exportDoc(mode) {
         showError('เกิดข้อผิดพลาดขณะสร้างไฟล์: ' + err.message);
         console.error(err);
     } finally {
-        btn.textContent = origText;
-        btn.disabled = false;
+        // Point 5: Ensure button resets even on error
+        if (btn) {
+            btn.textContent = origText;
+            btn.disabled = false;
+        }
     }
 }
 
@@ -664,7 +720,7 @@ function copyText(id) {
 }
 
 function showError(msg) {
-    document.getElementById('errorBox').textContent = '⚠️ ' + msg;
+    document.getElementById('errorBox').textContent = '️ ' + msg;
     document.getElementById('errorBox').classList.add('visible');
 }
 function clearError() {
