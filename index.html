@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EN → TH Novel Translator</title>
+<!-- Mammoth.js สำหรับอ่านไฟล์ Word -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- docx Library สำหรับสร้างไฟล์ .docx จริง -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+:root {
+    --bg: #faf8f4;
+    --surface: #ffffff;
+    --surface2: #f4f1eb;
+    --border: #e0d9ce;
+    --accent: #c4622d;
+    --accent-light: #f9ede6;
+    --text: #1a1410;
+    --text-muted: #7a6f65;
+    --text-subtle: #b5aca0;
+    --success: #2d7a4a;
+    --success-bg: #e8f5ee;
+    --radius: 12px;
+    --shadow: 0 2px 16px rgba(60,40,20,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Sarabun', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 16px;
+    line-height: 1.7;
+}
+header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.logo-mark { display: flex; align-items: center; gap: 0.5rem; }
+.logo-badge {
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+.logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--text);
+    font-style: italic;
+}
+.header-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    border-left: 1px solid var(--border);
+    padding-left: 1rem;
+}
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.upload-zone {
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-light);
+}
+.upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+.upload-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 1rem;
+    background: var(--surface2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.upload-icon svg { color: var(--accent); }
+.upload-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    margin-bottom: 0.4rem;
+}
+.upload-sub { font-size: 14px; color: var(--text-muted); }
+.file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid #b8ddc7;
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+.panel-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 0.8rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.panel-body { padding: 1.25rem; }
+.text-content {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 320px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+.char-count {
+    font-size: 12px;
+    color: var(--text-subtle);
+    background: var(--surface2);
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover:not(:disabled) { background: #a8521f; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--border); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+.progress-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    display: none;
+}
+.progress-wrap.visible { display: block; }
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+}
+.progress-bar-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+.progress-status {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 0.6rem;
+    min-height: 20px;
+}
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+@media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
+.lang-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.lang-en { background: #e8f0fe; color: #1a56c4; }
+.lang-th { background: #fef3e8; color: #c4622d; }
+.translation-content {
+    font-size: 16px;
+    line-height: 2.2;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 600px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+.copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-family: 'Sarabun', sans-serif;
+    padding: 3px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.copy-btn:hover { background: var(--surface2); color: var(--text); }
+.copy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-subtle); font-size: 14px; }
+.empty-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
+.error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-size: 14px;
+    display: none;
+}
+.error-box.visible { display: block; }
+.spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+}
+.spinner.visible { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+    <div class="logo-mark">
+        <div class="logo-badge">EN → TH</div>
+        <span class="logo-text">Novel Translator</span>
+    </div>
+    <span class="header-sub">แปลนิยายด้วย AI แบบรักษาบรรยากาศและชื่อเฉพาะ</span>
+</header>
+<main>
+    <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".docx" />
+        <div class="upload-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="12" y2="12"/>
+                <line x1="15" y1="15" x2="12" y2="12"/>
+            </svg>
+        </div>
+        <p class="upload-title">ลากไฟล์นิยายมาวางที่นี่</p>
+        <p class="upload-sub">รองรับ .docx (รักษาโครงสร้างย่อหน้า)</p>
+        <div id="fileChip" style="display:none">
+            <span class="file-chip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span id="fileName">—</span>
+            </span>
+        </div>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+    <div class="panel" id="sourcePanel" style="display:none">
+        <div class="panel-header">
+            <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
+            <span class="char-count" id="charCount">0 ตัวอักษร</span>
+        </div>
+        <div class="panel-body">
+            <div class="text-content" id="sourceText"></div>
+        </div>
+    </div>
+    <div class="panel" id="controlPanel" style="display:none">
+        <div class="panel-body">
+            <div class="controls">
+                <button class="btn btn-primary" id="translateBtn">
+                    <span class="spinner" id="spinner"></span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="translateIcon">
+                        <path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
+                    </svg>
+                    เริ่มแปลนิยาย
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label">
+            <span>กำลังแปล...</span>
+            <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">กำลังเตรียม...</div>
+    </div>
+    <div class="result-grid" id="resultGrid" style="display:none">
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
+                <div style="display:flex;gap:0.4rem">
+                    <button class="copy-btn" onclick="copyText('sourceDisplay')">คัดลอก</button>
+                    <button class="copy-btn" onclick="exportDoc('source')">⬇ .docx</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="translation-content" id="sourceDisplay"></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title"><span class="lang-flag lang-th">TH</span> คำแปล</span>
+                <div style="display:flex;gap:0.4rem">
+                    <button class="copy-btn" onclick="copyText('translationDisplay')">คัดลอก</button>
+                    <button class="copy-btn" onclick="exportDoc('translation')">⬇ .docx</button>
+                    <button class="copy-btn" onclick="exportDoc('both')" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="translation-content" id="translationDisplay">
+                    <div class="empty-state"><div class="empty-icon">📖</div>คำแปลจะปรากฏที่นี่</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
+const MAX_WORDS = 600;
+
+// Prompt ที่ออกแบบมาสำหรับนิยาย โดยเน้นให้คงชื่อคน/เมือง เป็นภาษาอังกฤษ
+const SYSTEM_PROMPT = `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายและวรรณกรรมภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
+กฎการแปล:
+1. รักษาบรรยากาศ น้ำเสียง และสไตล์การเล่าเรื่องให้ตรงต้นฉบับ (ทางการ/กึ่งทางการ/ภาษาพูดตามบริบท)
+2. แปลบทสนทนาให้เป็นธรรมชาติเหมือนคนไทยคุยกัน ใช้สรรพนามและระดับภาษาที่เหมาะสม
+3. รักษาโครงสร้างย่อหน้า เครื่องหมายวรรคตอน และจังหวะการเล่าเรื่อง ห้ามตัดต่อหรือเพิ่มเนื้อหา
+4. **ชื่อคน และชื่อเมือง/สถานที่**: ให้**คงเป็นภาษาอังกฤษ (English)** ไว้เลย เพื่อความแม่นยำ (เช่น 'Harry', 'London') ยกเว้นคำศัพท์สามัญ
+5. ตอบเฉพาะข้อความแปลเท่านั้น ห้ามมีคำนำหน้าหรือคำอธิบาย
+6. หากมีบทกวีหรือคำคล้องจอง ให้พยายามรักษาอารมณ์และจังหวะไว้`;
+
+let extractedText = '';
+let paragraphs = [];
+
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+});
+fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+        showError('กรุณาเลือกไฟล์ .docx เท่านั้น');
+        return;
+    }
+    clearError();
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileChip').style.display = 'block';
+    document.getElementById('resultGrid').style.display = 'none';
+    document.getElementById('sourcePanel').style.display = 'none';
+    document.getElementById('controlPanel').style.display = 'none';
+
+    const reader = new FileReader();
+    reader.onload = async e => {
+        try {
+            if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
+            const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+            extractedText = result.value.trim();
+            if (!extractedText) { showError('ไม่พบข้อความในไฟล์นี้'); return; }
+            
+            paragraphs = extractedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+            document.getElementById('sourceText').textContent = extractedText.slice(0, 2000) + (extractedText.length > 2000 ? '\n[... แสดง 2000 ตัวอักษรแรก ...]' : '');
+            document.getElementById('charCount').textContent = `${extractedText.length.toLocaleString()} ตัวอักษร · ${paragraphs.length} ย่อหน้า`;
+            
+            document.getElementById('sourcePanel').style.display = 'block';
+            document.getElementById('controlPanel').style.display = 'block';
+        } catch(err) {
+            showError('ไม่สามารถอ่านไฟล์ได้: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function countWords(text) {
+    return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+}
+
+function buildNovelChunks(paragraphs, maxWords) {
+    const chunks = [];
+    let current = [];
+    let currentWords = 0;
+
+    for (const para of paragraphs) {
+        const w = countWords(para);
+        if (w > maxWords) {
+            if (current.length > 0) {
+                chunks.push(current.join('\n\n'));
+                current = [];
+                currentWords = 0;
+            }
+            const sentences = para.match(/[^.!?]+[.!?]+[\s]*/g) || [para];
+            let subChunk = [];
+            let subWords = 0;
+            for (const sent of sentences) {
+                const sw = countWords(sent);
+                if (subWords + sw > maxWords && subChunk.length > 0) {
+                    chunks.push(subChunk.join(' '));
+                    subChunk = subChunk.slice(-1); // เก็บประโยคสุดท้ายไว้เป็นบริบท
+                    subWords = countWords(subChunk[0] || '');
+                }
+                subChunk.push(sent);
+                subWords += sw;
+            }
+            if (subChunk.length > 0) chunks.push(subChunk.join(' '));
+        } else {
+            if (currentWords + w > maxWords && current.length > 0) {
+                chunks.push(current.join('\n\n'));
+                current = [current[current.length - 1]]; // ย่อหน้าสุดท้ายเก็บไว้
+                currentWords = countWords(current[0]);
+            }
+            current.push(para);
+            currentWords += w;
+        }
+    }
+    if (current.length > 0) chunks.push(current.join('\n\n'));
+    return chunks;
+}
+
+async function translateChunk(text, retries = 2) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        let resp;
+        try {
+            resp = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    max_tokens: 2048,
+                    temperature: 0.4, // ค่าเหมาะสำหรับนิยาย
+                    top_p: 0.85,
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: 'ต้นฉบับ:\n' + text }
+                    ]
+                })
+            });
+        } catch(networkErr) {
+            if (attempt === retries) throw new Error('Cannot connect to API');
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+        }
+        
+        const raw = await resp.text();
+        if (!resp.ok && attempt < retries) continue;
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        
+        let data;
+        try { data = JSON.parse(raw); } catch(e) { 
+            if (attempt === retries) throw new Error('Invalid API response'); 
+            continue; 
+        }
+        
+        if (data.error && attempt < retries) continue;
+        const result = (data.choices?.[0]?.message?.content || '').trim();
+        if (!result && attempt < retries) continue;
+        return result;
+    }
+    throw new Error('Translation failed after retries');
+}
+
+document.getElementById('translateBtn').addEventListener('click', async () => {
+    if (!extractedText) return;
+    const btn = document.getElementById('translateBtn');
+    const spinner = document.getElementById('spinner');
+    const icon = document.getElementById('translateIcon');
+    
+    btn.disabled = true;
+    spinner.classList.add('visible');
+    icon.style.display = 'none';
+    clearError();
+
+    const chunks = buildNovelChunks(paragraphs, MAX_WORDS);
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+    const progressPct = document.getElementById('progressPct');
+    const progressStatus = document.getElementById('progressStatus');
+    
+    progressWrap.classList.add('visible');
+    document.getElementById('resultGrid').style.display = 'grid';
+    document.getElementById('sourceDisplay').textContent = extractedText;
+    document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังแปล...</div>';
+    
+    const translatedParts = [];
+    let successCount = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+        const pct = Math.round((i / chunks.length) * 100);
+        progressFill.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
+        
+        try {
+            const translated = await translateChunk(chunks[i]);
+            translatedParts.push(translated);
+            successCount++;
+            document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
+        } catch(err) {
+            showError(`เกิดข้อผิดพลาดที่ชิ้นที่ ${i+1}: ${err.message}`);
+            break;
+        }
+    }
+    
+    const finalText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
+    document.getElementById('translationDisplay').textContent = finalText;
+    
+    progressFill.style.width = '100%';
+    progressPct.textContent = '100%';
+    progressStatus.textContent = successCount === chunks.length 
+        ? `แปลเสร็จสมบูรณ์ ${translatedParts.length} ชิ้น` 
+        : `แปลเสร็จ ${translatedParts.length} จาก ${chunks.length} ชิ้น`;
+    
+    btn.disabled = false;
+    spinner.classList.remove('visible');
+    icon.style.display = '';
+});
+
+async function exportDoc(mode) {
+    if (typeof docx === 'undefined') {
+        showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
+        return;
+    }
+
+    const sourceText = document.getElementById('sourceDisplay').textContent;
+    const translationText = document.getElementById('translationDisplay').textContent;
+    const fileName = (document.getElementById('fileName').textContent || 'document').replace('.docx', '');
+    
+    const btn = event.currentTarget;
+    const origText = btn.textContent;
+    btn.textContent = 'กำลังสร้าง...';
+    btn.disabled = true;
+
+    try {
+        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel } = docx;
+        
+        const createRun = (text, isBold = false, font = 'Sarabun') => new TextRun({
+            text,
+            bold: isBold,
+            font,
+            size: 24 
+        });
+
+        const createParagraph = (text, font = 'Sarabun') => new Paragraph({
+            children: [createRun(text, false, font)],
+            spacing: { after: 240 },
+            bidirectional: font === 'Sarabun'
+        });
+
+        const paragraphsToDocx = (text, font) => 
+            text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => createParagraph(p, font));
+
+        let doc;
+        if (mode === 'source') {
+            doc = new Document({
+                sections: [{
+                    children: [
+                        new Paragraph({ children: [createRun('ต้นฉบับ (EN)', true, 'Calibri')], spacing: { after: 320 }, heading: HeadingLevel.HEADING_1 }),
+                        ...paragraphsToDocx(sourceText, 'Calibri')
+                    ]
+                }]
+            });
+        } else if (mode === 'translation') {
+            doc = new Document({
+                sections: [{
+                    children: [
+                        new Paragraph({ children: [createRun('คำแปลภาษาไทย (TH)', true, 'Sarabun')], spacing: { after: 320 }, heading: HeadingLevel.HEADING_1 }),
+                        ...paragraphsToDocx(translationText, 'Sarabun')
+                    ]
+                }]
+            });
+        } else {
+            const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+            const thParas = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+            const maxLen = Math.max(srcParas.length, thParas.length);
+            
+            const tableRows = [
+                new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph(createRun('English (Original)', true, 'Calibri'))], width: { size: 50, type: WidthType.PERCENTAGE }, shading: { fill: 'F4F1EB' } }),
+                        new TableCell({ children: [new Paragraph(createRun('ภาษาไทย (คำแปล)', true, 'Sarabun'))], width: { size: 50, type: WidthType.PERCENTAGE }, shading: { fill: 'FEF3E8' } })
+                    ]
+                })
+            ];
+
+            for (let i = 0; i < maxLen; i++) {
+                tableRows.push(new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph(createRun(srcParas[i] || '', false, 'Calibri'))], width: { size: 50, type: WidthType.PERCENTAGE } }),
+                        new TableCell({ children: [new Paragraph(createRun(thParas[i] || '', false, 'Sarabun'))], width: { size: 50, type: WidthType.PERCENTAGE } })
+                    ]
+                }));
+            }
+
+            doc = new Document({
+                sections: [{
+                    children: [
+                        new Paragraph({ children: [createRun('ต้นฉบับ + คำแปล', true, 'Sarabun')], spacing: { after: 320 }, heading: HeadingLevel.HEADING_1 }),
+                        new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } })
+                    ]
+                }]
+            });
+        }
+
+        const blob = await Packer.toBlob(doc);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName}_${mode}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        showError('เกิดข้อผิดพลาดขณะสร้างไฟล์: ' + err.message);
+        console.error(err);
+    } finally {
+        btn.textContent = origText;
+        btn.disabled = false;
+    }
+}
+
+function copyText(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+        const panel = el.closest('.panel');
+        if (!panel) return;
+        const btn = panel.querySelector('.copy-btn');
+        if (!btn) return;
+        const orig = btn.textContent;
+        btn.textContent = 'คัดลอกแล้ว ✓';
+        btn.style.color = '#2d7a4a';
+        setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+    });
+}
+
+function showError(msg) {
+    document.getElementById('errorBox').textContent = '⚠️ ' + msg;
+    document.getElementById('errorBox').classList.add('visible');
+}
+function clearError() {
+    document.getElementById('errorBox').classList.remove('visible');
+}
+</script>
+</body>
+</html>
