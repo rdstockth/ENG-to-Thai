@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EN → TH Novel Translator</title>
+<title>EN → TH Novel & Academic Translator</title>
 <!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.min.js"></script>
 <script>
-// Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 </script>
 <style>
@@ -49,24 +48,27 @@ main {
     display: flex; flex-direction: column; gap: 1.5rem;
 }
 
-/* ============ INPUT TABS ============ */
-.input-tabs {
+/* ============ TABS & SELECTORS ============ */
+.input-tabs, .mode-selector {
     display: flex; gap: 0.5rem; background: var(--surface);
     padding: 0.4rem; border-radius: var(--radius);
     border: 1px solid var(--border); width: fit-content;
 }
-.input-tab {
-    padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer;
+.mode-selector { margin-bottom: 0.5rem; }
+.tab-btn, .mode-btn {
+    padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer;
     font-size: 14px; font-weight: 500; color: var(--text-muted);
     transition: all 0.15s; display: flex; align-items: center; gap: 0.4rem;
-    border: none; background: none;
+    border: none; background: none; white-space: nowrap;
 }
-.input-tab:hover { color: var(--text); background: var(--surface2); }
-.input-tab.active {
+.tab-btn:hover, .mode-btn:hover { color: var(--text); background: var(--surface2); }
+.tab-btn.active, .mode-btn.active {
     background: var(--accent); color: white;
-    box-shadow: 0 2px 8px rgba(196,98,45,0.3);
+    box-shadow: 0 2px 8px rgba(196,98,45,0.25);
 }
-.input-tab svg { width: 16px; height: 16px; }
+.mode-desc {
+    font-size: 12px; color: var(--text-subtle); margin-top: 4px; padding-left: 4px;
+}
 
 /* ============ UPLOAD ZONE ============ */
 .upload-zone {
@@ -239,13 +241,11 @@ main {
 .spinner.visible { display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* Loading overlay for PDF */
 .loading-overlay {
     position: fixed; inset: 0; background: rgba(250,248,244,0.9);
     display: none; align-items: center; justify-content: center;
@@ -264,38 +264,47 @@ main {
 <header>
     <div class="logo-mark">
         <div class="logo-badge">EN → TH</div>
-        <span class="logo-text">Novel Translator</span>
+        <span class="logo-text">Translator</span>
     </div>
-    <span class="header-sub">แปลนิยายด้วย AI แบบรักษาบรรยากาศและชื่อเฉพาะ</span>
+    <span class="header-sub">แปลนิยายและเอกสารวิชาการด้วย AI แบบรักษาโครงสร้าง</span>
 </header>
 <main>
-    <!-- ============ INPUT METHOD TABS ============ -->
+    <!-- INPUT TABS -->
     <div class="input-tabs">
-        <button class="input-tab active" data-tab="file" onclick="switchInputTab('file')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="tab-btn active" data-tab="file" onclick="switchInputTab('file')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
             </svg>
             อัปโหลดไฟล์
         </button>
-        <button class="input-tab" data-tab="text" onclick="switchInputTab('text')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="tab-btn" data-tab="text" onclick="switchInputTab('text')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
             </svg>
             วางข้อความ
         </button>
     </div>
 
-    <!-- ============ FILE UPLOAD ZONE ============ -->
+    <!-- TRANSLATION MODE SELECTOR -->
+    <div class="mode-selector" id="modeSelector">
+        <button class="mode-btn active" data-mode="NOVEL" onclick="setMode('NOVEL')">
+            📖 นิยาย/วรรณกรรม
+        </button>
+        <button class="mode-btn" data-mode="ACADEMIC" onclick="setMode('ACADEMIC')">
+            📄 วิชาการ/บทความ
+        </button>
+    </div>
+    <div class="mode-desc" id="modeDesc">เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ</div>
+
+    <!-- FILE UPLOAD ZONE -->
     <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept=".docx,.pdf" />
         <div class="upload-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
-                <line x1="12" y1="18" x2="12" y2="12"/>
-                <line x1="9" y1="15" x2="12" y2="12"/>
-                <line x1="15" y1="15" x2="12" y2="12"/>
+                <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/>
             </svg>
         </div>
         <p class="upload-title">ลากไฟล์มาวางที่นี่</p>
@@ -311,7 +320,7 @@ main {
         </div>
     </div>
 
-    <!-- ============ TEXT INPUT ZONE ============ -->
+    <!-- TEXT INPUT ZONE -->
     <div class="text-input-zone" id="textInputZone">
         <div class="text-input-header">
             <span class="text-input-title">วางข้อความภาษาอังกฤษที่ต้องการแปล</span>
@@ -321,7 +330,7 @@ main {
             </div>
         </div>
         <div class="textarea-wrap">
-            <textarea id="textInput" placeholder="วางข้อความนิยายภาษาอังกฤษของคุณที่นี่...&#10;&#10;ระบบรองรับข้อความยาวไม่จำกัด และจะแบ่งแปลอัตโนมัติเป็นชิ้นๆ เพื่อความแม่นยำสูงสุด"></textarea>
+            <textarea id="textInput" placeholder="วางข้อความของคุณที่นี่...&#10;&#10;ระบบรองรับข้อความยาวไม่จำกัด และจะแบ่งแปลอัตโนมัติเป็นชิ้นๆ เพื่อความแม่นยำสูงสุด"></textarea>
         </div>
         <div class="textarea-footer">
             <span id="textCharCount">0 ตัวอักษร</span>
@@ -336,9 +345,7 @@ main {
             <span class="panel-title"><span class="lang-flag lang-en">EN</span> ต้นฉบับ</span>
             <span class="char-count" id="charCount">0 ตัวอักษร</span>
         </div>
-        <div class="panel-body">
-            <div class="text-content" id="sourceText"></div>
-        </div>
+        <div class="panel-body"><div class="text-content" id="sourceText"></div></div>
     </div>
     
     <div class="panel" id="controlPanel" style="display:none">
@@ -347,11 +354,9 @@ main {
                 <button class="btn btn-primary" id="translateBtn">
                     <span class="spinner" id="spinner"></span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="translateIcon">
-                        <path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/>
-                        <path d="M2 5h12"/><path d="M7 2h1"/>
-                        <path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
+                        <path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
                     </svg>
-                    เริ่มแปลนิยาย
+                    เริ่มแปล
                 </button>
                 <button class="btn btn-secondary" id="resetBtn" style="display:none">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -364,13 +369,8 @@ main {
     </div>
     
     <div class="progress-wrap" id="progressWrap">
-        <div class="progress-label">
-            <span>กำลังแปล...</span>
-            <span id="progressPct">0%</span>
-        </div>
-        <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="progressFill"></div>
-        </div>
+        <div class="progress-label"><span>กำลังแปล...</span><span id="progressPct">0%</span></div>
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
         <div class="progress-status" id="progressStatus">กำลังเตรียม...</div>
     </div>
     
@@ -383,9 +383,7 @@ main {
                     <button class="copy-btn" onclick="exportDoc('source', event)">.docx</button>
                 </div>
             </div>
-            <div class="panel-body">
-                <div class="translation-content" id="sourceDisplay"></div>
-            </div>
+            <div class="panel-body"><div class="translation-content" id="sourceDisplay"></div></div>
         </div>
         <div class="panel">
             <div class="panel-header">
@@ -396,70 +394,82 @@ main {
                     <button class="copy-btn" onclick="exportDoc('both', event)" style="background:var(--accent-light);color:var(--accent);border-color:#e8c4b0">⬇ เปรียบเทียบ</button>
                 </div>
             </div>
-            <div class="panel-body">
-                <div class="translation-content" id="translationDisplay">
-                    <div class="empty-state">
-                        <div class="empty-icon">📚</div>
-                        คำแปลจะปรากฏที่นี่
-                    </div>
-                </div>
-            </div>
+            <div class="panel-body"><div class="translation-content" id="translationDisplay"><div class="empty-state"><div class="empty-icon">📚</div>คำแปลจะปรากฏที่นี่</div></div></div>
         </div>
     </div>
 </main>
 
-<!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
     <div class="loading-text" id="loadingText">กำลังอ่านไฟล์...</div>
 </div>
 
 <script>
-// ==================== CONFIG ====================
+// ==================== CONFIG & MODES ====================
 const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
 const MAX_WORDS = 500;
 const RETRY_DELAY = 1500;
 const RATE_LIMIT_DELAY = 400;
 
-// ==================== SYSTEM PROMPT ====================
-const SYSTEM_PROMPT = `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายภาษาอังกฤษ→ภาษาไทยระดับมืออาชีพ
-
+const MODE_CONFIG = {
+    NOVEL: {
+        name: 'นิยาย/วรรณกรรม',
+        desc: 'เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ',
+        temperature: 0.25,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.1,
+        prompt: `คุณคือผู้เชี่ยวชาญด้านการแปลนิยายและวรรณกรรมภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
 📋 กฎการแปล (ต้องปฏิบัติตามอย่างเคร่งครัด):
 1. [สไตล์] รักษาโทนเรื่อง: ทางการ/กึ่งทางการ/ภาษาพูด ตามบริบทต้นฉบับ
 2. [บทสนทนา] ใช้สรรพนามไทยเหมาะสมกับความสัมพันธ์ตัวละคร (ฉัน/คุณ/เขา/นาง/ท่าน ฯลฯ)
 3. [โครงสร้าง] รักษาการขึ้นย่อหน้าและจังหวะการเล่าเรื่อง ห้ามตัด/เพิ่มเนื้อหา
-4. [ชื่อเฉพาะ] 
-   - ชื่อคน/สถานที่/องค์กร: ครั้งแรกที่ปรากฏ ให้เขียนเป็น "ชื่อไทย (ชื่ออังกฤษ)" 
-   - ครั้งถัดไปให้ใช้เฉพาะชื่ออังกฤษ เพื่อความสม่ำเสมอ
-   - ตัวอย่าง: "แฮร์รี่ (Harry)", "ลอนดอน (London)" → ต่อมาใช้ "Harry", "London"
+4. [ชื่อเฉพาะ] ครั้งแรกที่ปรากฏให้ใช้ "ชื่อไทย (ชื่ออังกฤษ)" ครั้งถัดไปใช้ภาษาอังกฤษล้วน
 5. [รูปแบบ] ห้ามใช้ Markdown, อีโมจิ, สัญลักษณ์พิเศษ ใช้เฉพาะข้อความธรรมดาและวรรคตอนมาตรฐานไทย
 6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำอธิบายเพิ่มเติม
-
 🎭 การจัดการเนื้อหาพิเศษ:
 - บทสนทนา: ใช้เครื่องหมายคำพูดไทย "..." และแทรกคำกริยาบทพูดให้ธรรมชาติ
 - ความคิดตัวละคร: ใช้เครื่องหมายขีดกลาง — หรือเอียงตามความเหมาะสม
 - บทกวี/คำคล้องจอง: ถ่ายทอดอารมณ์และจังหวะด้วยภาษาไทยที่สละสลวย
-- คำอุทาน/เสียง: แปลเป็นเสียงไทยที่สื่อความหมายใกล้เคียง
-
-✅ ตัวอย่างรูปแบบที่ต้องการ:
+✅ ตัวอย่าง:
 ต้นฉบับ: "I can't believe it," Harry whispered, staring at the castle.
-คำแปล: "ฉันไม่เชื่อเลย" แฮร์รี่กระซิบ พลางจ้องมองปราสาทนั้น
-
-ต้นฉบับ: The wind howled through the ancient trees.
-คำแปล: สายลมคำรามผ่านหมู่ไม้โบราณ
-
-ต้นฉบับ: "Welcome to Hogwarts," said Dumbledore.
-คำแปล: "ยินดีต้อนรับสู่ฮอกวอตส์ (Hogwarts)" ดัมเบิลดอร์กล่าว`;
+คำแปล: "ฉันไม่เชื่อเลย" แฮร์รี่กระซิบ พลางจ้องมองปราสาทนั้น`
+    },
+    ACADEMIC: {
+        name: 'วิชาการ/บทความ',
+        desc: 'เหมาะสำหรับบทความวิจัย เอกสารวิชาการ รายงาน เน้นความแม่นยำ ความเป็นทางการ และศัพท์เทคนิค',
+        temperature: 0.1,
+        top_p: 0.85,
+        frequency_penalty: 0.0,
+        presence_penalty: 0.0,
+        prompt: `คุณคือผู้เชี่ยวชาญด้านการแปลเอกสารวิชาการ บทความวิจัย และงานเขียนเชิงวิชาการภาษาอังกฤษเป็นภาษาไทยระดับมืออาชีพ
+📋 กฎการแปล (ต้องปฏิบัติตามอย่างเคร่งครัด):
+1. [ความถูกต้อง] รักษาความหมายเชิงวิชาการอย่างแม่นยำ ห้ามตีความเพิ่มหรือลดทอนเนื้อหา
+2. [ระดับภาษา] ใช้ภาษาทางการเชิงวิชาการ เหมาะสมกับบริบทงานวิจัย/บทความ
+3. [ศัพท์เทคนิค] รักษาศัพท์เทคนิค/คำย่อภาษาอังกฤษไว้ หากจำเป็นต้องแปล ให้ใช้รูปแบบ "คำแปลไทย (ศัพท์อังกฤษ)"
+4. [โครงสร้าง] รักษาโครงสร้างย่อหน้า หัวข้อ และลำดับตรรกะของต้นฉบับอย่างเคร่งครัด
+5. [รูปแบบ] ห้ามใช้ Markdown, อีโมจิ, หรือสัญลักษณ์พิเศษ ใช้ข้อความธรรมดาและเครื่องหมายวรรคตอนมาตรฐาน
+6. [เอาต์พุต] ตอบเฉพาะข้อความแปลภาษาไทยเท่านั้น ห้ามมีคำนำหน้าหรือคำอธิบาย
+🎓 การจัดการเนื้อหาพิเศษ:
+- สูตร/สมการ/ตัวเลข: คงรูปแบบเดิมไว้
+- การอ้างอิง: รักษาโครงสร้างการอ้างอิง (เช่น [1], (Author, Year))
+- ตาราง/รายการ: แปลเนื้อหาในตาราง/รายการอย่างถูกต้อง รักษารูปแบบลำดับ
+✅ ตัวอย่าง:
+ต้นฉบับ: The methodology employed in this study utilizes a mixed-methods approach.
+คำแปล: ระเบียบวิธีวิจัยที่ใช้ในการศึกษานี้ใช้แนวทางแบบผสมผสาน (mixed-methods approach)`
+    }
+};
 
 // ==================== GLOBAL STATE ====================
 let extractedText = '';
 let paragraphs = [];
 let translatedParts = [];
 let lastTranslatedContext = '';
+let currentInputMode = 'file';
+let currentTranslationMode = 'NOVEL';
 let isLibrariesReady = false;
-let currentInputMode = 'file'; // 'file' or 'text'
 
-// ==================== INITIALIZATION ====================
+// ==================== INIT ====================
 window.addEventListener('load', () => {
     const checkInterval = setInterval(() => {
         if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
@@ -468,7 +478,6 @@ window.addEventListener('load', () => {
             console.log('✅ Libraries loaded successfully');
         }
     }, 100);
-    
     setTimeout(() => {
         if (!isLibrariesReady) {
             console.warn('⚠️ Libraries might not be fully loaded, proceeding anyway...');
@@ -477,7 +486,7 @@ window.addEventListener('load', () => {
     }, 8000);
 });
 
-// ==================== DOM ELEMENTS ====================
+// ==================== DOM & MODE SELECTOR ====================
 const fileInput = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
 const textInputZone = document.getElementById('textInputZone');
@@ -487,27 +496,22 @@ const resetBtn = document.getElementById('resetBtn');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadingText = document.getElementById('loadingText');
 
-// ==================== INPUT TAB SWITCHING ====================
+function setMode(mode) {
+    currentTranslationMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    document.getElementById('modeDesc').textContent = MODE_CONFIG[mode].desc;
+    document.getElementById('translateBtn').querySelector('svg').nextSibling.textContent = ` เริ่มแปล (${MODE_CONFIG[mode].name})`;
+}
+
 function switchInputTab(tab) {
     currentInputMode = tab;
-    
-    // Update tab buttons
-    document.querySelectorAll('.input-tab').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tab);
-    });
-    
-    // Show/hide zones
-    if (tab === 'file') {
-        uploadZone.style.display = 'block';
-        textInputZone.classList.remove('active');
-    } else {
-        uploadZone.style.display = 'none';
-        textInputZone.classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+    uploadZone.style.display = tab === 'file' ? 'block' : 'none';
+    textInputZone.classList.toggle('active', tab === 'text');
+    if (tab === 'text') {
         textInput.focus();
         updateTextCharCount();
     }
-    
-    // Reset panels
     document.getElementById('sourcePanel').style.display = 'none';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('resultGrid').style.display = 'none';
@@ -515,193 +519,109 @@ function switchInputTab(tab) {
     clearError();
 }
 
-// ==================== TEXT INPUT HANDLERS ====================
+// ==================== TEXT INPUT ====================
 function updateTextCharCount() {
     const count = textInput.value.length;
-    document.getElementById('textCharCount').textContent = 
-        `${count.toLocaleString()} ตัวอักษร · ${countWords(textInput.value)} คำ`;
+    document.getElementById('textCharCount').textContent = `${count.toLocaleString()} ตัวอักษร · ${countWords(textInput.value)} คำ`;
 }
-
 textInput.addEventListener('input', updateTextCharCount);
 
 function pasteFromClipboard() {
     navigator.clipboard.readText().then(text => {
-        if (text) {
-            textInput.value = text;
-            updateTextCharCount();
-        }
-    }).catch(err => {
-        showError('ไม่สามารถอ่านคลิปบอร์ดได้ กรุณากดวางเอง (Ctrl+V)');
-        console.warn('Clipboard read failed:', err);
-    });
+        if (text) { textInput.value = text; updateTextCharCount(); }
+    }).catch(() => showError('ไม่สามารถอ่านคลิปบอร์ดได้ กรุณากดวางเอง (Ctrl+V)'));
 }
 
 function clearTextInput() {
     if (confirm('ล้างข้อความทั้งหมดใช่หรือไม่?')) {
-        textInput.value = '';
-        updateTextCharCount();
-        textInput.focus();
+        textInput.value = ''; updateTextCharCount(); textInput.focus();
     }
 }
 
 function useTextInput() {
     const text = textInput.value.trim();
-    if (!text) {
-        showError('กรุณาวางข้อความก่อนกดใช้');
-        return;
-    }
-    
+    if (!text) return showError('กรุณาวางข้อความก่อนกดใช้');
     clearError();
-    extractedText = text;
-    
-    // Split into paragraphs
-    paragraphs = extractedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-    
-    // Preview
-    const preview = extractedText.slice(0, 2000) + 
-        (extractedText.length > 2000 ? '\n\n[... แสดง 2000 ตัวอักษรแรก ...]' : '');
-    
-    document.getElementById('sourceText').textContent = preview;
-    document.getElementById('charCount').textContent = 
-        `${extractedText.length.toLocaleString()} ตัวอักษร · ${paragraphs.length} ย่อหน้า`;
-    
-    document.getElementById('fileName').textContent = 'ข้อความที่วาง';
-    document.getElementById('fileChip').style.display = 'block';
-    
-    document.getElementById('sourcePanel').style.display = 'block';
-    document.getElementById('controlPanel').style.display = 'block';
-    resetBtn.style.display = 'none';
-    
-    // Scroll to preview
-    document.getElementById('sourcePanel').scrollIntoView({ behavior: 'smooth' });
+    processExtractedText(text, 'ข้อความที่วาง');
 }
 
-// ==================== DRAG & DROP HANDLERS ====================
-uploadZone.addEventListener('dragover', e => { 
-    e.preventDefault(); 
-    uploadZone.classList.add('drag-over'); 
-});
-uploadZone.addEventListener('dragleave', () => {
-    uploadZone.classList.remove('drag-over');
-});
+// ==================== DRAG & DROP ====================
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
 uploadZone.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    e.preventDefault(); uploadZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
-fileInput.addEventListener('change', e => {
-    if (e.target.files[0]) handleFile(e.target.files[0]);
-});
-
-// ==================== SHOW/HIDE LOADING ====================
-function showLoading(message = 'กำลังประมวลผล...') {
-    loadingText.textContent = message;
-    loadingOverlay.classList.add('visible');
-}
-
-function hideLoading() {
-    loadingOverlay.classList.remove('visible');
-}
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
 // ==================== FILE HANDLING ====================
+function showLoading(msg = 'กำลังประมวลผล...') { loadingText.textContent = msg; loadingOverlay.classList.add('visible'); }
+function hideLoading() { loadingOverlay.classList.remove('visible'); }
+
 async function handleFile(file) {
-    const fileName = file.name.toLowerCase();
-    
-    if (!fileName.endsWith('.docx') && !fileName.endsWith('.pdf')) {
-        showError('กรุณาเลือกไฟล์ .docx หรือ .pdf เท่านั้น');
-        return;
-    }
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['docx', 'pdf'].includes(ext)) return showError('กรุณาเลือกไฟล์ .docx หรือ .pdf เท่านั้น');
     
     clearError();
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileChip').style.display = 'block';
-    
-    // Reset UI
     document.getElementById('resultGrid').style.display = 'none';
     document.getElementById('sourcePanel').style.display = 'none';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
-    
-    showLoading(fileName.endsWith('.pdf') ? 'กำลังอ่านไฟล์ PDF...' : 'กำลังอ่านไฟล์...');
-    
+    showLoading(ext === 'pdf' ? 'กำลังอ่านไฟล์ PDF...' : 'กำลังอ่านไฟล์...');
+
     try {
         let text = '';
+        const arrayBuffer = await file.arrayBuffer();
         
-        if (fileName.endsWith('.docx')) {
+        if (ext === 'docx') {
             if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
-            const arrayBuffer = await file.arrayBuffer();
             const result = await mammoth.extractRawText({ arrayBuffer });
             text = result.value.trim();
-            
-        } else if (fileName.endsWith('.pdf')) {
+        } else {
             if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js library not loaded');
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            
-            let fullText = [];
+            const pdf = await pdfjsLib.getDocument({  arrayBuffer }).promise;
+            const fullText = [];
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 loadingText.textContent = `กำลังอ่านหน้า ${pageNum} จาก ${pdf.numPages}...`;
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText.push(pageText);
-                
-                // Small delay to prevent UI freeze
+                fullText.push(textContent.items.map(item => item.str).join(' '));
                 if (pageNum % 5 === 0) await sleep(50);
             }
             text = fullText.join('\n\n').trim();
         }
-        
         hideLoading();
-        
-        if (!text) { 
-            showError('ไม่พบข้อความในไฟล์นี้ (อาจเป็นไฟล์ภาพหรือป้องกัน)'); 
-            return; 
-        }
-        
-        extractedText = text;
-        paragraphs = extractedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-        
-        const preview = extractedText.slice(0, 2000) + 
-            (extractedText.length > 2000 ? '\n\n[... แสดง 2000 ตัวอักษรแรก ...]' : '');
-        
-        document.getElementById('sourceText').textContent = preview;
-        document.getElementById('charCount').textContent = 
-            `${extractedText.length.toLocaleString()} ตัวอักษร · ${paragraphs.length} ย่อหน้า`;
-        
-        document.getElementById('sourcePanel').style.display = 'block';
-        document.getElementById('controlPanel').style.display = 'block';
-        resetBtn.style.display = 'none';
-        
+        if (!text) return showError('ไม่พบข้อความในไฟล์นี้ (อาจเป็นไฟล์ภาพหรือป้องกัน)');
+        processExtractedText(text, file.name);
     } catch(err) {
         hideLoading();
-        console.error('File read error:', err);
         showError('ไม่สามารถอ่านไฟล์ได้: ' + err.message);
     }
 }
 
-// ==================== UTILITY FUNCTIONS ====================
-function countWords(text) {
-    return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+function processExtractedText(text, sourceName) {
+    extractedText = text;
+    paragraphs = extractedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    const preview = extractedText.slice(0, 2000) + (extractedText.length > 2000 ? '\n\n[... แสดง 2000 ตัวอักษรแรก ...]' : '');
+    document.getElementById('sourceText').textContent = preview;
+    document.getElementById('charCount').textContent = `${extractedText.length.toLocaleString()} ตัวอักษร · ${paragraphs.length} ย่อหน้า`;
+    document.getElementById('fileName').textContent = sourceName;
+    document.getElementById('fileChip').style.display = 'block';
+    document.getElementById('sourcePanel').style.display = 'block';
+    document.getElementById('controlPanel').style.display = 'block';
+    resetBtn.style.display = 'none';
+    document.getElementById('sourcePanel').scrollIntoView({ behavior: 'smooth' });
 }
 
-function showError(msg) {
-    const box = document.getElementById('errorBox');
-    box.textContent = '⚠️ ' + msg;
-    box.classList.add('visible');
-    setTimeout(() => box.classList.remove('visible'), 10000);
-}
+// ==================== UTILITIES ====================
+function countWords(text) { return text.trim().split(/\s+/).filter(w => w.length > 0).length; }
+function showError(msg) { const box = document.getElementById('errorBox'); box.textContent = '⚠️ ' + msg; box.classList.add('visible'); setTimeout(() => box.classList.remove('visible'), 10000); }
+function clearError() { document.getElementById('errorBox').classList.remove('visible'); }
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-function clearError() {
-    document.getElementById('errorBox').classList.remove('visible');
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ==================== SMART CHUNKING ====================
+// ==================== CHUNKING ====================
 function buildNovelChunks(paragraphs, maxWords) {
     const chunks = [];
     let current = [];
@@ -710,69 +630,30 @@ function buildNovelChunks(paragraphs, maxWords) {
     for (let i = 0; i < paragraphs.length; i++) {
         const para = paragraphs[i];
         const wordCount = countWords(para);
-        
         const isDialogueStart = /^["']/.test(para.trim());
         const isDialogueEnd = /["'][.!?]["']?\s*$/.test(para.trim());
         
         if (wordCount > maxWords) {
-            if (current.length > 0) {
-                chunks.push({ 
-                    text: current.join('\n\n'), 
-                    context: getChunkContext(chunks) 
-                });
-                current = [];
-                currentWords = 0;
-            }
-            
+            if (current.length > 0) { chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0; }
             const sentences = para.match(/[^.!?]+[.!?]+/g) || [para];
             let subChunk = [], subWords = 0;
-            
             for (const sent of sentences) {
                 const sw = countWords(sent);
                 if (subWords + sw > maxWords && subChunk.length > 0) {
-                    chunks.push({ 
-                        text: subChunk.join(' '), 
-                        context: getChunkContext(chunks) 
-                    });
-                    subChunk = []; 
-                    subWords = 0;
+                    chunks.push({ text: subChunk.join(' '), context: getChunkContext(chunks) }); subChunk = []; subWords = 0;
                 }
-                subChunk.push(sent);
-                subWords += sw;
+                subChunk.push(sent); subWords += sw;
             }
-            if (subChunk.length > 0) {
-                chunks.push({ 
-                    text: subChunk.join(' '), 
-                    context: getChunkContext(chunks) 
-                });
-            }
+            if (subChunk.length > 0) chunks.push({ text: subChunk.join(' '), context: getChunkContext(chunks) });
         } else {
             if (currentWords + wordCount > maxWords && current.length > 0) {
-                if (isDialogueStart && !isDialogueEnd && i < paragraphs.length - 1) {
-                    current.push(para);
-                    currentWords += wordCount;
-                    continue;
-                }
-                
-                chunks.push({ 
-                    text: current.join('\n\n'), 
-                    context: getChunkContext(chunks) 
-                });
-                current = [];
-                currentWords = 0;
+                if (isDialogueStart && !isDialogueEnd && i < paragraphs.length - 1) { current.push(para); currentWords += wordCount; continue; }
+                chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) }); current = []; currentWords = 0;
             }
-            current.push(para);
-            currentWords += wordCount;
+            current.push(para); currentWords += wordCount;
         }
     }
-    
-    if (current.length > 0) {
-        chunks.push({ 
-            text: current.join('\n\n'), 
-            context: getChunkContext(chunks) 
-        });
-    }
-    
+    if (current.length > 0) chunks.push({ text: current.join('\n\n'), context: getChunkContext(chunks) });
     return chunks;
 }
 
@@ -783,35 +664,27 @@ function getChunkContext(chunks) {
     return sentences.slice(-3).join(' ').trim();
 }
 
-// ==================== TRANSLATION VALIDATION ====================
+// ==================== VALIDATION ====================
 function validateTranslation(original, translated) {
     const issues = [];
-    
-    if (!/[ก-๙]/.test(translated)) {
-        issues.push('ไม่พบข้อความภาษาไทย');
-    }
-    
-    if (/[*#`>|\[\]{}()]/.test(translated) && !/[\(\)]/.test(translated.replace(/\([^)]+\)/g, ''))) {
-        issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
-    }
+    if (!/[ก-๙]/.test(translated)) issues.push('ไม่พบข้อความภาษาไทย');
+    if (/[*#`>|\[\]{}()]/.test(translated) && !/[\(\)]/.test(translated.replace(/\([^)]+\)/g, ''))) issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
     
     const ratio = translated.length / Math.max(original.length, 1);
-    if (ratio < 0.4 || ratio > 2.5) {
-        issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
-    }
+    // Academic texts can be longer due to formal phrasing
+    const maxRatio = currentTranslationMode === 'ACADEMIC' ? 3.0 : 2.5;
+    if (ratio < 0.4 || ratio > maxRatio) issues.push(`ความยาวไม่สมเหตุสมผล (สัดส่วน: ${ratio.toFixed(2)}x)`);
     
-    if (translated.toLowerCase().includes('คุณคือผู้เชี่ยวชาญ') || 
-        translated.toLowerCase().includes('rules for translation')) {
-        issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
-    }
-    
+    const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation'];
+    if (sysPhrases.some(p => translated.toLowerCase().includes(p))) issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
     return { valid: issues.length === 0, issues };
 }
 
 // ==================== API TRANSLATION ====================
 async function translateChunk(text, context = '', retries = 2) {
+    const config = MODE_CONFIG[currentTranslationMode];
     const userPrompt = context 
-        ? `บริบทก่อนหน้า (เพื่อรักษาความต่อเนื่อง):\n${context}\n\n---\n\nข้อความต่อไปที่ต้องแปล:\n${text}`
+        ? `บริบทก่อนหน้า:\n${context}\n\n---\n\nข้อความต่อไปที่ต้องแปล:\n${text}`
         : `ข้อความที่ต้องแปล:\n${text}`;
     
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -821,77 +694,55 @@ async function translateChunk(text, context = '', retries = 2) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     max_tokens: 2048,
-                    temperature: 0.2,
-                    top_p: 0.9,
-                    frequency_penalty: 0.1,
-                    presence_penalty: 0.1,
+                    temperature: config.temperature,
+                    top_p: config.top_p,
+                    frequency_penalty: config.frequency_penalty,
+                    presence_penalty: config.presence_penalty,
                     messages: [
-                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'system', content: config.prompt },
                         { role: 'user', content: userPrompt }
                     ]
                 })
             });
             
             if (!response.ok) {
-                const errorText = await response.text().catch(() => '');
-                console.warn(`HTTP ${response.status}: ${errorText}`);
-                if (attempt < retries) {
-                    await sleep(RETRY_DELAY * (attempt + 1));
-                    continue;
-                }
+                const errText = await response.text().catch(() => '');
+                console.warn(`HTTP ${response.status}: ${errText}`);
+                if (attempt < retries) { await sleep(RETRY_DELAY * (attempt + 1)); continue; }
                 throw new Error(`API error: HTTP ${response.status}`);
             }
             
             let data;
-            try {
-                const raw = await response.text();
-                data = JSON.parse(raw);
-            } catch (e) {
-                if (attempt < retries) {
-                    await sleep(RETRY_DELAY);
-                    continue;
-                }
-                throw new Error('Invalid JSON response from API');
-            }
+            try { data = JSON.parse(await response.text()); } 
+            catch (e) { if (attempt < retries) { await sleep(RETRY_DELAY); continue; } throw new Error('Invalid JSON response'); }
             
             const content = data.choices?.[0]?.message?.content;
             if (!content) {
-                if (data.error) {
-                    console.warn('API error:', data.error);
-                }
-                if (attempt < retries) {
-                    await sleep(RETRY_DELAY);
-                    continue;
-                }
+                if (data.error) console.warn('API error:', data.error);
+                if (attempt < retries) { await sleep(RETRY_DELAY); continue; }
                 throw new Error('Empty response from API');
             }
             
             const result = content.trim();
             const validation = validateTranslation(text, result);
-            if (!validation.valid) {
+            if (!validation.valid && attempt < retries) {
                 console.warn('Validation failed:', validation.issues);
-                if (attempt < retries) {
-                    await sleep(RETRY_DELAY);
-                    continue;
-                }
+                await sleep(RETRY_DELAY);
+                continue;
             }
-            
             return result;
-            
         } catch (err) {
             console.warn(`Attempt ${attempt + 1} failed:`, err.message);
             if (attempt === retries) throw err;
             await sleep(RETRY_DELAY * (attempt + 1));
         }
     }
-    
     throw new Error('Translation failed after all retries');
 }
 
-// ==================== MAIN TRANSLATION PROCESS ====================
+// ==================== MAIN PROCESS ====================
 translateBtn.addEventListener('click', async () => {
     if (!extractedText || paragraphs.length === 0) return;
-    
     translateBtn.disabled = true;
     resetBtn.style.display = 'none';
     document.getElementById('spinner').classList.add('visible');
@@ -899,7 +750,7 @@ translateBtn.addEventListener('click', async () => {
     clearError();
     
     const chunks = buildNovelChunks(paragraphs, MAX_WORDS);
-    console.log(`📦 Split into ${chunks.length} chunks for translation`);
+    console.log(`📦 Split into ${chunks.length} chunks for translation (${currentTranslationMode})`);
     
     const progressWrap = document.getElementById('progressWrap');
     const progressFill = document.getElementById('progressFill');
@@ -909,8 +760,7 @@ translateBtn.addEventListener('click', async () => {
     progressWrap.classList.add('visible');
     document.getElementById('resultGrid').style.display = 'grid';
     document.getElementById('sourceDisplay').textContent = extractedText;
-    document.getElementById('translationDisplay').innerHTML = 
-        '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังเริ่มต้นการแปล...</div>';
+    document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังเริ่มต้นการแปล...</div>';
     
     translatedParts = [];
     lastTranslatedContext = '';
@@ -919,7 +769,6 @@ translateBtn.addEventListener('click', async () => {
     try {
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
-            
             const pct = Math.round(((i) / chunks.length) * 100);
             progressFill.style.width = pct + '%';
             progressPct.textContent = pct + '%';
@@ -928,7 +777,7 @@ translateBtn.addEventListener('click', async () => {
             if (i > 0) await sleep(RATE_LIMIT_DELAY);
             
             const prevContext = lastTranslatedContext 
-                ? `คำแปลก่อนหน้า (เพื่อรักษาความต่อเนื่อง):\n${lastTranslatedContext.slice(-400)}` 
+                ? `คำแปลก่อนหน้า:\n${lastTranslatedContext.slice(-400)}` 
                 : '';
             
             const translated = await translateChunk(chunk.text, prevContext);
@@ -937,8 +786,7 @@ translateBtn.addEventListener('click', async () => {
             successCount++;
             
             if (i % 2 === 0 || i === chunks.length - 1) {
-                document.getElementById('translationDisplay').textContent = 
-                    translatedParts.join('\n\n');
+                document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
             }
         }
         
@@ -947,7 +795,6 @@ translateBtn.addEventListener('click', async () => {
         
         progressFill.style.width = '100%';
         progressPct.textContent = '100%';
-        
         if (successCount === chunks.length) {
             progressStatus.textContent = `✅ แปลเสร็จสมบูรณ์ ${translatedParts.length} ชิ้น`;
             progressStatus.style.color = 'var(--success)';
@@ -955,13 +802,10 @@ translateBtn.addEventListener('click', async () => {
             progressStatus.textContent = `⚠️ แปลเสร็จ ${successCount} จาก ${chunks.length} ชิ้น`;
             progressStatus.style.color = 'var(--accent)';
         }
-        
     } catch (err) {
-        console.error('Translation error:', err);
         showError(`เกิดข้อผิดพลาด: ${err.message}`);
         progressStatus.textContent = '❌ หยุดเนื่องจากข้อผิดพลาด';
         progressStatus.style.color = 'var(--error)';
-        
     } finally {
         translateBtn.disabled = false;
         resetBtn.style.display = 'inline-flex';
@@ -970,209 +814,82 @@ translateBtn.addEventListener('click', async () => {
     }
 });
 
-// ==================== RESET FUNCTION ====================
+// ==================== RESET ====================
 resetBtn.addEventListener('click', () => {
-    extractedText = '';
-    paragraphs = [];
-    translatedParts = [];
-    lastTranslatedContext = '';
-    
+    extractedText = ''; paragraphs = []; translatedParts = []; lastTranslatedContext = '';
     document.getElementById('fileChip').style.display = 'none';
     document.getElementById('fileName').textContent = '—';
     document.getElementById('sourcePanel').style.display = 'none';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
     document.getElementById('resultGrid').style.display = 'none';
-    document.getElementById('translationDisplay').innerHTML = 
-        '<div class="empty-state"><div class="empty-icon">📚</div>คำแปลจะปรากฏที่นี่</div>';
-    
-    fileInput.value = '';
-    textInput.value = '';
-    updateTextCharCount();
-    
-    translateBtn.disabled = false;
-    resetBtn.style.display = 'none';
+    document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div>คำแปลจะปรากฏที่นี่</div>';
+    fileInput.value = ''; textInput.value = ''; updateTextCharCount();
+    translateBtn.disabled = false; resetBtn.style.display = 'none';
     document.getElementById('spinner').classList.remove('visible');
     document.getElementById('translateIcon').style.display = '';
-    
     clearError();
-    
-    // Return to default tab
     switchInputTab('file');
 });
 
-// ==================== EXPORT FUNCTIONS ====================
+// ==================== EXPORT ====================
 async function exportDoc(mode, evt) {
-    if (!window.docx) {
-        showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
-        return;
-    }
-
+    if (!window.docx) return showError('ไลบรารีสร้างไฟล์ยังไม่โหลดเสร็จ โปรดรีเฟรชหน้าเว็บ');
     const sourceText = document.getElementById('sourceDisplay').textContent;
     const translationText = document.getElementById('translationDisplay').textContent;
-    const baseName = (document.getElementById('fileName').textContent || 'novel').replace(/\.[^.]+$/, '');
-    
+    const baseName = (document.getElementById('fileName').textContent || 'document').replace(/\.[^.]+$/, '');
     const btn = evt?.currentTarget;
     let origText = '';
-    
-    if (btn) {
-        origText = btn.textContent;
-        btn.textContent = 'กำลังสร้าง...';
-        btn.disabled = true;
-    }
+    if (btn) { origText = btn.textContent; btn.textContent = 'กำลังสร้าง...'; btn.disabled = true; }
 
     try {
         const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel } = window.docx;
-        
-        const createRun = (text, isBold = false, font = 'Sarabun', size = 24) => 
-            new TextRun({ text, bold: isBold, font, size });
-
+        const createRun = (text, isBold = false, font = 'Sarabun', size = 24) => new TextRun({ text, bold: isBold, font, size });
         const createParagraph = (text, font = 'Sarabun', heading = null) => {
-            const props = {
-                children: [createRun(text, false, font)],
-                spacing: { after: 240 },
-                bidirectional: font === 'Sarabun'
-            };
+            const props = { children: [createRun(text, false, font)], spacing: { after: 240 }, bidirectional: font === 'Sarabun' };
             if (heading) props.heading = heading;
             return new Paragraph(props);
         };
-
-        const textToParagraphs = (text, font) => 
-            text.split(/\n+/)
-                .map(p => p.trim())
-                .filter(Boolean)
-                .map(p => createParagraph(p, font));
+        const textToParagraphs = (text, font) => text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => createParagraph(p, font));
 
         let doc;
-        
         if (mode === 'source') {
-            doc = new Document({
-                sections: [{
-                    properties: {},
-                    children: [
-                        createParagraph('📖 ต้นฉบับภาษาอังกฤษ (Original)', 'Calibri', HeadingLevel.HEADING_1),
-                        ...textToParagraphs(sourceText, 'Calibri')
-                    ]
-                }]
-            });
-        } 
-        else if (mode === 'translation') {
-            doc = new Document({
-                sections: [{
-                    properties: {},
-                    children: [
-                        createParagraph('📚 คำแปลภาษาไทย (Translation)', 'Sarabun', HeadingLevel.HEADING_1),
-                        ...textToParagraphs(translationText, 'Sarabun')
-                    ]
-                }]
-            });
-        } 
-        else {
+            doc = new Document({ sections: [{ children: [createParagraph('📖 ต้นฉบับภาษาอังกฤษ', 'Calibri', HeadingLevel.HEADING_1), ...textToParagraphs(sourceText, 'Calibri')] }] });
+        } else if (mode === 'translation') {
+            doc = new Document({ sections: [{ children: [createParagraph('📚 คำแปลภาษาไทย', 'Sarabun', HeadingLevel.HEADING_1), ...textToParagraphs(translationText, 'Sarabun')] }] });
+        } else {
             const srcParas = sourceText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const thParas = translationText.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const maxLen = Math.max(srcParas.length, thParas.length);
-            
-            const tableRows = [
-                new TableRow({
-                    children: [
-                        new TableCell({ 
-                            children: [createParagraph('🇬🇧 English (Original)', 'Calibri', HeadingLevel.HEADING_3)], 
-                            width: { size: 50, type: WidthType.PERCENTAGE }, 
-                            shading: { fill: 'E8F0FE' } 
-                        }),
-                        new TableCell({ 
-                            children: [createParagraph('🇹🇭 ภาษาไทย (คำแปล)', 'Sarabun', HeadingLevel.HEADING_3)], 
-                            width: { size: 50, type: WidthType.PERCENTAGE }, 
-                            shading: { fill: 'FEF3E8' } 
-                        })
-                    ]
-                })
-            ];
-
-            for (let i = 0; i < maxLen; i++) {
-                tableRows.push(new TableRow({
-                    children: [
-                        new TableCell({ 
-                            children: [createParagraph(srcParas[i] || '', 'Calibri')], 
-                            width: { size: 50, type: WidthType.PERCENTAGE } 
-                        }),
-                        new TableCell({ 
-                            children: [createParagraph(thParas[i] || '', 'Sarabun')], 
-                            width: { size: 50, type: WidthType.PERCENTAGE } 
-                        })
-                    ]
-                }));
-            }
-
-            doc = new Document({
-                sections: [{
-                    properties: {},
-                    children: [
-                        createParagraph('📚 ต้นฉบับ + คำแปล (Comparison)', 'Sarabun', HeadingLevel.HEADING_1),
-                        new Table({ 
-                            rows: tableRows, 
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: {
-                                top: { style: 'single', size: 1 },
-                                bottom: { style: 'single', size: 1 },
-                                left: { style: 'single', size: 1 },
-                                right: { style: 'single', size: 1 },
-                                insideHorizontal: { style: 'single', size: 1 },
-                                insideVertical: { style: 'single', size: 1 }
-                            }
-                        })
-                    ]
-                }]
-            });
+            const tableRows = [new TableRow({ children: [new TableCell({ children: [createParagraph('🇬🇧 English', 'Calibri', HeadingLevel.HEADING_3)], width: { size: 50, type: WidthType.PERCENTAGE }, shading: { fill: 'E8F0FE' } }), new TableCell({ children: [createParagraph('🇹🇭 ภาษาไทย', 'Sarabun', HeadingLevel.HEADING_3)], width: { size: 50, type: WidthType.PERCENTAGE }, shading: { fill: 'FEF3E8' } })] })];
+            for (let i = 0; i < maxLen; i++) tableRows.push(new TableRow({ children: [new TableCell({ children: [createParagraph(srcParas[i] || '', 'Calibri')], width: { size: 50, type: WidthType.PERCENTAGE } }), new TableCell({ children: [createParagraph(thParas[i] || '', 'Sarabun')], width: { size: 50, type: WidthType.PERCENTAGE } })] }));
+            doc = new Document({ sections: [{ children: [createParagraph('📚 เปรียบเทียบต้นฉบับและคำแปล', 'Sarabun', HeadingLevel.HEADING_1), new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE }, borders: { top: { style: 'single', size: 1 }, bottom: { style: 'single', size: 1 }, left: { style: 'single', size: 1 }, right: { style: 'single', size: 1 }, insideHorizontal: { style: 'single', size: 1 }, insideVertical: { style: 'single', size: 1 } } })] }] });
         }
 
         const blob = await Packer.toBlob(doc);
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${baseName}_${mode}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
+        const a = document.createElement('a'); a.href = url; a.download = `${baseName}_${mode}.docx`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     } catch (err) {
         showError('เกิดข้อผิดพลาดขณะสร้างไฟล์: ' + err.message);
-        console.error('Export error:', err);
     } finally {
-        if (btn) {
-            btn.textContent = origText;
-            btn.disabled = false;
-        }
+        if (btn) { btn.textContent = origText; btn.disabled = false; }
     }
 }
 
-// ==================== COPY FUNCTION ====================
+// ==================== COPY ====================
 function copyText(id) {
     const el = document.getElementById(id);
     if (!el) return;
-    
     const text = el.textContent;
-    if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) {
-        showError('ยังไม่มีเนื้อหาให้คัดลอก');
-        return;
-    }
-    
+    if (!text || text.includes('คำแปลจะปรากฏที่นี่') || text.includes('กำลังแปล')) return showError('ยังไม่มีเนื้อหาให้คัดลอก');
     navigator.clipboard.writeText(text).then(() => {
         const btn = event?.target;
         if (btn && btn.classList.contains('copy-btn')) {
-            const orig = btn.textContent;
-            btn.textContent = '✓ คัดลอกแล้ว';
-            btn.style.color = 'var(--success)';
-            setTimeout(() => { 
-                btn.textContent = orig; 
-                btn.style.color = ''; 
-            }, 2000);
+            const orig = btn.textContent; btn.textContent = '✓ คัดลอกแล้ว'; btn.style.color = 'var(--success)';
+            setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
         }
-    }).catch(err => {
-        console.error('Copy failed:', err);
-        showError('ไม่สามารถคัดลอกได้ กรุณาลองใหม่');
-    });
+    }).catch(() => showError('ไม่สามารถคัดลอกได้'));
 }
 </script>
 </body>
