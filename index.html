@@ -151,6 +151,27 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
 .genre-btn[data-genre="SPORTS"].active     { background: #1a7a3a; }
 .genre-desc { font-size: 12px; color: var(--text-subtle); padding-left: 2px; min-height: 18px; }
 
+/* ==================== RELATIONSHIP PANEL ==================== */
+.relationship-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.relationship-header { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 0.8rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; user-select: none; }
+.relationship-header:hover { background: #ede9e0; }
+.relationship-title { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
+.relationship-toggle-icon { transition: transform 0.2s; font-size: 12px; color: var(--text-subtle); }
+.relationship-toggle-icon.open { transform: rotate(180deg); }
+.relationship-body { padding: 1rem 1.25rem; display: none; }
+.relationship-body.open { display: block; }
+.relationship-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.6; }
+.relationship-examples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.relationship-example-tag { font-size: 11px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+.relationship-example-tag:hover { background: var(--accent-light); border-color: #e8c4b0; color: var(--accent); }
+.relationship-textarea { width: 100%; min-height: 120px; padding: 0.75rem; border: 1px solid var(--input-border); border-radius: 8px; background: var(--input-bg); font-family: 'Sarabun', sans-serif; font-size: 14px; color: var(--text); line-height: 1.8; resize: vertical; outline: none; transition: border-color 0.15s; }
+.relationship-textarea:focus { border-color: var(--accent); }
+.relationship-textarea::placeholder { color: var(--text-subtle); }
+.relationship-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; gap: 0.5rem; }
+.relationship-count { font-size: 12px; color: var(--text-subtle); }
+.relationship-clear-btn { font-size: 12px; padding: 0.3rem 0.8rem; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.relationship-clear-btn:hover { background: var(--error-bg); color: var(--error); border-color: #fecaca; }
+
 /* ==================== CONSISTENCY PANEL ==================== */
 .consistency-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: none; }
 .consistency-panel.visible { display: block; }
@@ -268,6 +289,39 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
                     </button>
                     <button class="btn-sm" onclick="clearGlossary()" style="font-size:12px">ล้างทั้งหมด</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RELATIONSHIP PANEL ==================== -->
+    <div class="relationship-panel" id="relationshipPanel">
+        <div class="relationship-header" onclick="toggleRelationship()">
+            <span class="relationship-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><line x1="16" y1="3" x2="22" y2="3"/><line x1="16" y1="7" x2="22" y2="7"/><line x1="19" y1="3" x2="19" y2="7"/></svg>
+                บริบทตัวละคร &amp; ความสัมพันธ์
+                <span id="relationshipBadge" style="display:none; background:var(--accent); color:white; font-size:10px; padding:1px 6px; border-radius:10px; font-weight:700;"></span>
+            </span>
+            <span class="relationship-toggle-icon" id="relationshipToggleIcon">▼</span>
+        </div>
+        <div class="relationship-body" id="relationshipBody">
+            <p class="relationship-desc">ระบุความสัมพันธ์ของตัวละคร สถานที่ หรือข้อมูลพื้นหลังที่สำคัญ เพื่อให้ AI แปลได้ถูกต้องตามบริบท — หนึ่งบรรทัดต่อหนึ่งข้อมูล</p>
+            <div class="relationship-examples">
+                <span class="relationship-example-tag" onclick="insertRelationshipExample('Noah เป็นพี่สาวของ Moon')">Noah เป็นพี่สาวของ Moon</span>
+                <span class="relationship-example-tag" onclick="insertRelationshipExample('Aiden ชอบ Luna แต่ยังไม่กล้าสารภาพ')">Aiden ชอบ Luna แต่ยังไม่กล้าสารภาพ</span>
+                <span class="relationship-example-tag" onclick="insertRelationshipExample('Aldenmoor คือเมืองหลวงของอาณาจักร')">Aldenmoor คือเมืองหลวงของอาณาจักร</span>
+                <span class="relationship-example-tag" onclick="insertRelationshipExample('Kai เป็นคู่แข่งและเพื่อนเก่าของ Ryo')">Kai เป็นคู่แข่งและเพื่อนเก่าของ Ryo</span>
+                <span class="relationship-example-tag" onclick="insertRelationshipExample('ผู้บรรยายเรื่องนี้คือ Elara พูดในมุมมองบุรุษที่หนึ่ง')">ผู้บรรยาย POV คือ Elara</span>
+            </div>
+            <textarea
+                id="relationshipInput"
+                class="relationship-textarea"
+                placeholder="เช่น:&#10;Noah เป็นพี่สาวของ Moon&#10;Aiden เป็นนักดาบฝีมือระดับ S และเป็นอดีตเพื่อนร่วมทีมของ Kira&#10;The Silver Tower คือสถานที่ฝึกเวทมนตร์ศักดิ์สิทธิ์"
+                oninput="updateRelationshipCount()"
+                onblur="saveRelationship()"
+            ></textarea>
+            <div class="relationship-footer">
+                <span class="relationship-count" id="relationshipCount">0 บรรทัด</span>
+                <button class="relationship-clear-btn" onclick="clearRelationship()">ล้างทั้งหมด</button>
             </div>
         </div>
     </div>
@@ -597,6 +651,7 @@ let chunkTimings = [];
 // ==================== INIT ====================
 window.addEventListener('load', () => {
     initGlossary();
+    initRelationship();
     const checkInterval = setInterval(() => {
         if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
             isLibrariesReady = true;
@@ -927,6 +982,76 @@ function buildGlossaryPromptBlock() {
     return `\n\n📚 Custom Glossary (you MUST use exactly these translations — do not alter or deviate):\n${lines}`;
 }
 
+// ==================== RELATIONSHIP PROMPT BLOCK ====================
+function buildRelationshipPromptBlock() {
+    const text = (document.getElementById('relationshipInput')?.value || '').trim();
+    if (!text) return '';
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return '';
+    const entries = lines.map(l => `- ${l}`).join('\n');
+    return `\n\n🧩 Character & World Context (use this background knowledge to translate accurately and consistently):\n${entries}`;
+}
+
+function toggleRelationship() {
+    const body = document.getElementById('relationshipBody');
+    const icon = document.getElementById('relationshipToggleIcon');
+    body.classList.toggle('open');
+    icon.classList.toggle('open');
+}
+
+function updateRelationshipCount() {
+    const text = (document.getElementById('relationshipInput')?.value || '').trim();
+    const lines = text ? text.split('\n').filter(l => l.trim().length > 0) : [];
+    const count = document.getElementById('relationshipCount');
+    const badge = document.getElementById('relationshipBadge');
+    if (count) count.textContent = `${lines.length} บรรทัด`;
+    if (badge) {
+        if (lines.length > 0) { badge.textContent = lines.length; badge.style.display = 'inline'; }
+        else { badge.style.display = 'none'; }
+    }
+}
+
+function saveRelationship() {
+    try {
+        const val = document.getElementById('relationshipInput')?.value || '';
+        localStorage.setItem('translator_relationships', val);
+    } catch(e) {}
+}
+
+function clearRelationship() {
+    const el = document.getElementById('relationshipInput');
+    if (!el || !el.value.trim()) return;
+    if (confirm('ล้างข้อมูลความสัมพันธ์ทั้งหมดใช่หรือไม่?')) {
+        el.value = '';
+        updateRelationshipCount();
+        saveRelationship();
+    }
+}
+
+function insertRelationshipExample(text) {
+    const el = document.getElementById('relationshipInput');
+    if (!el) return;
+    const cur = el.value.trim();
+    el.value = cur ? cur + '\n' + text : text;
+    el.focus();
+    updateRelationshipCount();
+    saveRelationship();
+    // open panel if closed
+    const body = document.getElementById('relationshipBody');
+    const icon = document.getElementById('relationshipToggleIcon');
+    if (!body.classList.contains('open')) { body.classList.add('open'); icon.classList.add('open'); }
+}
+
+function initRelationship() {
+    try {
+        const saved = localStorage.getItem('translator_relationships');
+        if (saved) {
+            const el = document.getElementById('relationshipInput');
+            if (el) { el.value = saved; updateRelationshipCount(); }
+        }
+    } catch(e) {}
+}
+
 // ==================== CHUNKING ====================
 function buildNovelChunks(paragraphs, maxWords) {
     const chunks = [];
@@ -995,7 +1120,7 @@ function getOverlapWords(text, wordCount = 50) {
 // ==================== API TRANSLATION ====================
 async function translateChunk(text, context = {}, retries = 2) {
     const config = getActiveConfig();
-    const systemPrompt = getActivePrompt() + buildGlossaryPromptBlock();
+    const systemPrompt = getActivePrompt() + buildGlossaryPromptBlock() + buildRelationshipPromptBlock();
 
     // Build user prompt with bilingual context + overlap hint
     const parts = [];
