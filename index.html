@@ -224,12 +224,12 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
     </div>
 
     <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept=".docx,.pdf" />
+        <input type="file" id="fileInput" accept=".docx,.pdf,.txt" />
         <div class="upload-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
         </div>
         <p class="upload-title">ลากไฟล์มาวางที่นี่</p>
-        <p class="upload-sub">รองรับ .docx และ .pdf</p>
+        <p class="upload-sub">รองรับ .docx, .pdf และ .txt</p>
         <p class="upload-hint">💡 ไฟล์ PDF อาจใช้เวลาประมวลผลนานกว่าเล็กน้อย</p>
         <div id="fileChip" style="display:none">
             <span class="file-chip">
@@ -426,6 +426,7 @@ const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
 const MAX_WORDS = 350;
 const RETRY_DELAY = 1500;
 const RATE_LIMIT_DELAY = 800;
+const API_TIMEOUT_MS = 120000;
 const CHECKPOINT_KEY_PREFIX = 'translator_checkpoint_';
 
 // ==================== SHARED IDIOMS BLOCK ====================
@@ -512,7 +513,7 @@ Style: Capture the full emotional weight — heart-fluttering, heartbreaking, te
 Dialogue: Match the emotional register exactly. Use natural Thai romantic speech patterns. Vary pronouns to reflect intimacy levels:
   - Early/distant: ผม/คุณ, ฉัน/คุณ
   - Growing closeness: เธอ, แก, มึง/กู (only if the original is explicitly crude/playful)
-  - Intimate/affectionate: หนู, ที่รัก, ที่หวาน, ชื่อเล่น as appropriate
+  - Intimate/affectionate: หนู, ที่รัก, หวานใจ, ชื่อเล่น as appropriate
 Inner Monologue: Render internal thoughts naturally — Thai readers expect rich, introspective narration. Use italics-equivalent dashes (—) or clearly set apart the thought.
 Structure: Maintain paragraph breaks and emotional pacing. Never rush a tender or dramatic scene.
 Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only. For nicknames or pet names, find a Thai equivalent that carries the same warmth.
@@ -522,7 +523,7 @@ Output: Provide only the Thai translation. No additional explanations.
 Romantic & Emotional Vocabulary:
 
 Feelings/Sensations: flutter → หัวใจสั่น/ใจหวิว, ache → เจ็บปวดลึกๆ, longing → ความคิดถึง/โหยหา, warmth → ความอบอุ่น, butterflies → ใจสั่น/ตื่นเต้นจนใจจะหล่น, heartbeat → เสียงหัวใจ/การเต้นของหัวใจ, blush → หน้าแดง/แก้มร้อน, shiver → สั่น/ขนลุก (from emotion), gaze → สายตา/แววตา, stare → จ้องมอง
-Relationship Terms: soulmate → คนที่ใช่/เนื้อคู่, chemistry → ความเข้ากัน/ประกายระหว่างกัน, confession → การสารภาพรัก, rejection → การปฏิเสธ, jealousy → ความหึงหวง, possessive → หวงแหน/ครอบครอง, clingy → ติดพัน/ไม่ยอมห่าง, fall for → หลงรัก/ตกหลุมรัก, let go → ปล่อยวาง/놓아주다
+Relationship Terms: soulmate → คนที่ใช่/เนื้อคู่, chemistry → ความเข้ากัน/ประกายระหว่างกัน, confession → การสารภาพรัก, rejection → การปฏิเสธ, jealousy → ความหึงหวง, possessive → หวงแหน/ครอบครอง, clingy → ติดพัน/ไม่ยอมห่าง, fall for → หลงรัก/ตกหลุมรัก, let go → ปล่อยวาง/ปล่อยเขาไป/ปล่อยเธอไป
 Dramatic Expressions: silence stretched between them → ความเงียบแผ่ขยายระหว่างทั้งสอง, words caught in her throat → คำพูดติดอยู่ในลำคอ, heart clenched → หัวใจบีบตัว, breath hitched → หยุดหายใจชั่วขณะ, eyes stung → ตาแสบ (ก่อนจะร้องไห้)
 
 Tone Guidance:
@@ -549,7 +550,7 @@ Output: Provide only the Thai translation. No additional explanations.
 
 Action & Combat Vocabulary:
 
-Movement: dash → พุ่งตัว, dodge → 躲หลบ/หลีก, lunge → พุ่งเข้าใส่, parry → รับ/ป้องกัน, block → สกัด, counter → โต้กลับ, evade → หลบหลีก, weave → ร่อน/เคลื่อนไหวหลบ, charge →돌突突돌진/พุ่งเข้าใส่, retreat → ถอยร่น, stance → ท่วงท่า/ท่ายืน
+Movement: dash → พุ่งตัว, dodge → หลบ/หลีก, lunge → พุ่งเข้าใส่, parry → รับ/ป้องกัน, block → สกัด, counter → โต้กลับ, evade → หลบหลีก, weave → ร่อน/เคลื่อนไหวหลบ, charge → พุ่งเข้าใส่/บุกทะลวง, retreat → ถอยร่น, stance → ท่วงท่า/ท่ายืน
 Strikes: punch → หมัด, kick → เตะ, slam → ฟาด, crush → บดขยี้, slash → ฟัน, stab → แทง, jab → แย็บ, hook → ฮุค, uppercut → อัปเปอร์คัต, sweep → กวาด, headbutt → โขกหัว
 Impact Words: crack → แตกสลาย/กระหึ่ม, shatter → แตกเป็นเสี่ยงๆ, explode → ระเบิด, crumble → พังทลาย, snap → หัก, tear → ฉีก, pierce → ทะลุทะลวง, rip → ฉีกขาด
 Body/Pain: blood → เลือด, wound → บาดแผล, bruise → รอยช้ำ, fracture → กระดูกแตก/ร้าว, numb → ชา, adrenaline → อะดรีนาลีน/ความตื่นตัว, instinct → สัญชาตญาณ, exhausted → ร่างกายพัง/หมดแรง
@@ -658,7 +659,11 @@ window.addEventListener('load', () => {
             clearInterval(checkInterval);
         }
     }, 100);
-    setTimeout(() => { isLibrariesReady = true; }, 15000);
+    setTimeout(() => {
+        const requiredReady = typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined';
+        isLibrariesReady = requiredReady;
+        if (!requiredReady) console.warn('Some document libraries are still unavailable after 15 seconds.');
+    }, 15000);
 });
 
 // ==================== DOM ====================
@@ -749,7 +754,7 @@ function hideLoading() { loadingOverlay.classList.remove('visible'); }
 
 async function handleFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['docx', 'pdf'].includes(ext)) return showError('กรุณาเลือกไฟล์ .docx หรือ .pdf เท่านั้น');
+    if (!['docx', 'pdf', 'txt'].includes(ext)) return showError('กรุณาเลือกไฟล์ .docx, .pdf หรือ .txt เท่านั้น');
     clearError();
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileChip').style.display = 'block';
@@ -758,7 +763,7 @@ async function handleFile(file) {
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('progressWrap').classList.remove('visible');
     document.getElementById('resumeBanner').classList.remove('visible');
-    showLoading(ext === 'pdf' ? 'กำลังอ่านไฟล์ PDF...' : 'กำลังอ่านไฟล์...');
+    showLoading(ext === 'pdf' ? 'กำลังอ่านไฟล์ PDF...' : ext === 'txt' ? 'กำลังอ่านข้อความ...' : 'กำลังอ่านไฟล์...');
     try {
         let text = '';
         const arrayBuffer = await file.arrayBuffer();
@@ -766,6 +771,9 @@ async function handleFile(file) {
             if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
             const result = await mammoth.extractRawText({ arrayBuffer });
             text = result.value.trim();
+        } else if (ext === 'txt') {
+            text = await file.text();
+            text = text.replace(/^\uFEFF/, '').trim();
         } else {
             if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js library not loaded');
             const pdf = await pdfjsLib.getDocument({ arrayBuffer }).promise;
@@ -1088,7 +1096,7 @@ function validateTranslation(original, translated) {
         const maxRatio = currentTranslationMode === 'ACADEMIC' ? 5.0 : 4.5;
         if (ratio < 0.25 || ratio > maxRatio) issues.push(`ความยาวไม่สมเหตุสมผล (${ratio.toFixed(2)}x)`);
     }
-    const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation'];
+    const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation', 'translation rules'];
     if (sysPhrases.some(p => translated.toLowerCase().includes(p))) issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
     return { valid: issues.length === 0, issues };
 }
@@ -1118,6 +1126,34 @@ function getOverlapWords(text, wordCount = 50) {
 }
 
 // ==================== API TRANSLATION ====================
+async function callTranslatorAPI(payload, timeoutMs = API_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+        const raw = await response.text();
+        if (!response.ok) {
+            const shortBody = raw ? ` — ${raw.slice(0, 180)}` : '';
+            throw new Error(`API error: HTTP ${response.status}${shortBody}`);
+        }
+        try {
+            return JSON.parse(raw);
+        } catch(e) {
+            throw new Error('Invalid JSON response from API');
+        }
+    } catch (err) {
+        if (err.name === 'AbortError') throw new Error('API timeout — เซิร์ฟเวอร์ตอบช้าเกินไป');
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 async function translateChunk(text, context = {}, retries = 2) {
     const config = getActiveConfig();
     const systemPrompt = getActivePrompt() + buildGlossaryPromptBlock() + buildRelationshipPromptBlock();
@@ -1142,28 +1178,15 @@ async function translateChunk(text, context = {}, retries = 2) {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    max_tokens: 2048,
-                    temperature: config.temperature, top_p: config.top_p,
-                    frequency_penalty: config.frequency_penalty, presence_penalty: config.presence_penalty,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ]
-                })
+            const data = await callTranslatorAPI({
+                max_tokens: 2048,
+                temperature: config.temperature, top_p: config.top_p,
+                frequency_penalty: config.frequency_penalty, presence_penalty: config.presence_penalty,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ]
             });
-
-            if (!response.ok) {
-                if (attempt < retries) { await sleep(RETRY_DELAY * (attempt + 1)); continue; }
-                throw new Error(`API error: HTTP ${response.status}`);
-            }
-
-            let data;
-            try { data = JSON.parse(await response.text()); }
-            catch(e) { if (attempt < retries) { await sleep(RETRY_DELAY); continue; } throw new Error('Invalid JSON response'); }
 
             const content = data.choices?.[0]?.message?.content;
             if (!content) {
@@ -1220,21 +1243,14 @@ Respond in JSON only, with no additional text, using this format:
 If no issues are found, return an empty issues array and a summary stating that the quality is good.`;
 
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                max_tokens: 1000,
-                temperature: 0.1,
-                messages: [
-                    { role: 'system', content: prompt },
-                    { role: 'user', content: sample }
-                ]
-            })
+        const data = await callTranslatorAPI({
+            max_tokens: 1000,
+            temperature: 0.1,
+            messages: [
+                { role: 'system', content: prompt },
+                { role: 'user', content: sample }
+            ]
         });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = JSON.parse(await response.text());
         const raw = data.choices?.[0]?.message?.content || '';
         const cleaned = raw.replace(/```json|```/g, '').trim();
         let parsed;
