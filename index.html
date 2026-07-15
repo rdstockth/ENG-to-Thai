@@ -4,11 +4,80 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EN → TH Novel & Academic Translator</title>
+<!-- Mammoth 1.11.0: current browser build used for DOCX text extraction -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.min.js"></script>
+
+<!--
+Document libraries are loaded with automatic fallbacks:
+- DOCX export: docx 9.7.1, fallback to 8.6.0
+- PDF extraction: PDF.js 6.1.200 ES module, fallback to 3.11.174 classic build
+This keeps the single-file HTML compatible with newer browsers while retaining a safe fallback.
+-->
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+window.__libraryStatus = {
+    mammoth: '1.11.0',
+    docx: 'loading',
+    pdfjs: 'loading'
+};
+
+function loadClassicScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = () => resolve(src);
+        script.onerror = () => {
+            script.remove();
+            reject(new Error(`โหลดสคริปต์ไม่สำเร็จ: ${src}`));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+window.__docxReady = (async () => {
+    const primary = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs';
+    const fallback = 'https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.min.js';
+
+    try {
+        await loadClassicScript(primary);
+        if (!window.docx) throw new Error('DOCX 9.7.1 loaded without window.docx');
+        window.__libraryStatus.docx = '9.7.1';
+        console.info('DOCX library ready: 9.7.1');
+    } catch (primaryError) {
+        console.warn('DOCX 9.7.1 unavailable; using 8.6.0 fallback.', primaryError);
+        await loadClassicScript(fallback);
+        if (!window.docx) throw new Error('DOCX fallback loaded without window.docx');
+        window.__libraryStatus.docx = '8.6.0 (fallback)';
+        console.info('DOCX library ready: 8.6.0 fallback');
+    }
+})();
+
+window.__pdfJsReady = (async () => {
+    const modernModule = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.min.mjs';
+    const modernWorker = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.worker.min.mjs';
+    const fallbackScript = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    const fallbackWorker = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    try {
+        const module = await import(modernModule);
+        module.GlobalWorkerOptions.workerSrc = modernWorker;
+        window.pdfjsLib = module;
+        window.__libraryStatus.pdfjs = '6.1.200';
+        console.info('PDF.js ready: 6.1.200');
+    } catch (primaryError) {
+        console.warn('PDF.js 6.1.200 unavailable; using 3.11.174 fallback.', primaryError);
+        await loadClassicScript(fallbackScript);
+        if (!window.pdfjsLib) throw new Error('PDF.js fallback loaded without window.pdfjsLib');
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = fallbackWorker;
+        window.__libraryStatus.pdfjs = '3.11.174 (fallback)';
+        console.info('PDF.js ready: 3.11.174 fallback');
+    }
+})();
+
+window.__documentLibrariesReady = Promise.all([
+    window.__docxReady,
+    window.__pdfJsReady
+]);
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
@@ -561,20 +630,27 @@ let currentJobId = null;
 let chunkTimings = [];
 
 // ==================== INIT ====================
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     initGlossary();
     initRelationship();
-    const checkInterval = setInterval(() => {
-        if (typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined') {
-            isLibrariesReady = true;
-            clearInterval(checkInterval);
-        }
-    }, 100);
-    setTimeout(() => {
-        const requiredReady = typeof mammoth !== 'undefined' && typeof window.docx !== 'undefined' && typeof pdfjsLib !== 'undefined';
-        isLibrariesReady = requiredReady;
-        if (!requiredReady) console.warn('Some document libraries are still unavailable after 15 seconds.');
-    }, 15000);
+
+    try {
+        await window.__documentLibrariesReady;
+    } catch (error) {
+        console.error('Document library initialization failed:', error);
+    }
+
+    isLibrariesReady =
+        typeof mammoth !== 'undefined' &&
+        typeof window.docx !== 'undefined' &&
+        typeof window.pdfjsLib !== 'undefined';
+
+    if (isLibrariesReady) {
+        console.info('Document libraries ready:', window.__libraryStatus);
+    } else {
+        console.warn('Some document libraries are unavailable:', window.__libraryStatus);
+        showError('โหลดไลบรารีเอกสารไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้าเว็บ');
+    }
 });
 
 // ==================== DOM ====================
