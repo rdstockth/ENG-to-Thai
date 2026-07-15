@@ -9,7 +9,7 @@
 
 <!--
 Document libraries are loaded with automatic fallbacks:
-- DOCX export: docx 9.7.1, fallback to 8.6.0
+- DOCX export: docx 9.7.1 browser IIFE/ES module, fallback to 8.6.0
 - PDF extraction: PDF.js 6.1.200 ES module, fallback to 3.11.174 classic build
 This keeps the single-file HTML compatible with newer browsers while retaining a safe fallback.
 -->
@@ -35,20 +35,34 @@ function loadClassicScript(src) {
 }
 
 window.__docxReady = (async () => {
-    const primary = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs';
+    // index.iife.js is the browser build. Do not use index.umd.cjs in a
+    // <script> tag because jsDelivr serves .cjs as application/node.
+    const browserBuild = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js';
+    const moduleBuild = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.mjs';
     const fallback = 'https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.min.js';
 
     try {
-        await loadClassicScript(primary);
-        if (!window.docx) throw new Error('DOCX 9.7.1 loaded without window.docx');
-        window.__libraryStatus.docx = '9.7.1';
-        console.info('DOCX library ready: 9.7.1');
-    } catch (primaryError) {
-        console.warn('DOCX 9.7.1 unavailable; using 8.6.0 fallback.', primaryError);
-        await loadClassicScript(fallback);
-        if (!window.docx) throw new Error('DOCX fallback loaded without window.docx');
-        window.__libraryStatus.docx = '8.6.0 (fallback)';
-        console.info('DOCX library ready: 8.6.0 fallback');
+        await loadClassicScript(browserBuild);
+        if (!window.docx) throw new Error('DOCX 9.7.1 IIFE loaded without window.docx');
+        window.__libraryStatus.docx = '9.7.1 (browser IIFE)';
+        console.info('DOCX library ready: 9.7.1 browser IIFE');
+    } catch (iifeError) {
+        console.warn('DOCX 9.7.1 IIFE unavailable; trying ES module.', iifeError);
+        try {
+            const module = await import(moduleBuild);
+            if (!module?.Document || !module?.Packer) {
+                throw new Error('DOCX 9.7.1 module is missing required exports');
+            }
+            window.docx = module;
+            window.__libraryStatus.docx = '9.7.1 (ES module)';
+            console.info('DOCX library ready: 9.7.1 ES module');
+        } catch (moduleError) {
+            console.warn('DOCX 9.7.1 unavailable; using 8.6.0 fallback.', moduleError);
+            await loadClassicScript(fallback);
+            if (!window.docx) throw new Error('DOCX fallback loaded without window.docx');
+            window.__libraryStatus.docx = '8.6.0 (fallback)';
+            console.info('DOCX library ready: 8.6.0 fallback');
+        }
     }
 })();
 
