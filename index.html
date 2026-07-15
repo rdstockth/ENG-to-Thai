@@ -423,184 +423,54 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; f
 <script>
 // ==================== CONFIG ====================
 const API_URL = 'https://thaillm.setthapong-pasavet.workers.dev/';
-const MAX_WORDS = 350;
-const RETRY_DELAY = 1500;
-const RATE_LIMIT_DELAY = 800;
+const CHUNK_WORD_LIMITS = { NOVEL: 650, ACADEMIC: 550 };
 const API_TIMEOUT_MS = 120000;
-const CHECKPOINT_KEY_PREFIX = 'translator_checkpoint_';
+const MAX_OUTPUT_TOKENS = 4096;
+const RETRY_DELAY = 1200;
+const MIN_REQUEST_GAP_MS = 250;
+const CHECKPOINT_KEY_PREFIX = 'translator_checkpoint_v2_';
+let lastApiRequestAt = 0;
 
-// ==================== SHARED IDIOMS BLOCK ====================
-const SHARED_IDIOMS = `
-Idioms and Phrasal Verbs (translate by meaning, not word-for-word):
+// Prompts are intentionally concise. Only terminology that appears in the
+// current chunk is appended, reducing repeated input tokens and latency.
+const BASE_TRANSLATION_RULES = `
+Core rules:
+1. Translate every part of the supplied source into natural Thai. Do not omit, summarize, explain, censor, or invent content.
+2. Preserve paragraph breaks, headings, lists, dialogue order, narrative viewpoint, ambiguity, numbers, units, dates, citations, and reference markers.
+3. Infer Thai pronouns and politeness only from explicit evidence in the source or supplied character context. When uncertain, avoid unnecessary pronouns rather than guessing.
+4. Translate idioms and phrasal verbs by meaning, not word-for-word.
+5. Render proper names consistently in Thai. Do not switch back and forth between Thai and English spellings. A custom glossary overrides every other rule.
+6. Previous context is reference only. Never translate or repeat it in the output.
+7. Return only the Thai translation of [TEXT TO TRANSLATE]. No preface, notes, Markdown fences, or explanation.`;
 
-"leave X alone" → ปล่อย X ไว้ / อย่าไปยุ่งกับ X
-"go along with" → เออออตาม / คล้อยตาม / ไหลตามน้ำ
-"give up" → ยอมแพ้ / ล้มเลิก
-"make up" → แต่งเรื่องขึ้นมา / ชดเชย (depending on context)
-"break down" → พังทลาย / สติแตก / ร้องไห้โฮ (depending on context)
-"look into" → ตรวจสอบ / สืบสวน
-"show up" → ปรากฏตัว / โผล่มา
-"run into" → บังเอิญเจอ
-"figure out" → คิดให้ออก / หาคำตอบ / เข้าใจแล้ว
-"pass out" → สลบ / หมดสติ
-"wipe out" → กวาดล้าง / ทำลายล้างจนสิ้นซาก
-"turn out" → กลายเป็นว่า / ปรากฏว่า
-"bring up" → หยิบยกขึ้นมาพูด
-"cut off" → พูดแทรก / ขัดจังหวะ / ตัดขาด
-"look down on" → ดูถูก / เหยียดหยาม
-"take over" → เข้าควบคุม / ยึดอำนาจ
-"back off" → ถอยไป / เลิกยุ่ง
-"get away with" → ลอยนวล / ทำผิดแล้วไม่มีใครจับได้
-"catch up" → ตามให้ทัน / อัปเดตเรื่องราว
-"give in" → ยอมจำนน / ยอมโอนอ่อน
-"freak out" → สติแตก / ตกใจกลัวสุดขีด
-"out of the blue" → จู่ๆ ก็เกิดขึ้น / ไม่มีปี่มีขลุ่ย
-"cross one's mind" → แวบเข้ามาในหัว
-"turn a blind eye" → แกล้งทำเป็นมองไม่เห็น / เอาหูไปนาเอาตาไปไร่
-"bite the bullet" → กัดฟันเผชิญหน้า / กัดฟันสู้
-"ring a bell" → คุ้นหู / คุ้นๆ ว่าเคยได้ยิน
-"piece of cake" → ง่ายเหมือนปอกกล้วย / เรื่องจิ๊บจ๊อย
-"spill the beans" → เผลอหลุดปาก / เผยความลับ
-"keep an eye on" → จับตาดู / เฝ้าระวัง
-"take for granted" → มองข้ามความสำคัญ / เห็นเป็นของตาย
-"stab in the back" → หักหลัง / ลอบกัด
-"get rid of" → กำจัดทิ้ง / เขี่ยทิ้ง
-"look forward to" → ตั้งตารอคอย
-"stand out" → โดดเด่น / สะดุดตา
-"mess up" → ทำพัง / ทำพลาด
-
-Handling Special Content:
-
-Dialogue: Use Thai quotation marks "..." and include natural dialogue tags
-Character thoughts: Use dashes — or italics as appropriate`;
-
-// ==================== GENRE CONFIG ====================
 const GENRE_CONFIG = {
     FANTASY: {
         name: '⚔️ แฟนตาซี / ผจญภัย',
-        desc: 'นิยายแฟนตาซี isekai RPG เวทมนตร์ การผจญภัย เน้นคำศัพท์เกม/RPG และบรรยากาศโลกแฟนตาซี',
-        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
-        prompt: `You are a professional expert in translating English fantasy and adventure novels into Thai.
-
-Translation Rules (must be strictly followed):
-
-Style: Preserve the original tone—epic, dramatic, or conversational—based on the source context. Fantasy narration should feel grand and immersive.
-Dialogue: Use appropriate Thai pronouns according to character relationships and social rank (ฉัน, ข้า, เจ้า, ท่าน, etc.). Nobles and royalty use formal pronouns; adventurers may use casual ones.
-Structure: Maintain paragraph breaks and narrative pacing. Do not omit or add content.
-Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only.
-Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
-Output: Provide only the Thai translation. No additional explanations.
-
-Fantasy/RPG/Game Terminology (transliteration only, do not translate literally):
-
-Creatures/Monsters: Golem → โกเลม, Dragon → มังกร, Orc → ออร์ค, Elf → เอลฟ์, Dwarf → ดวาร์ฟ, Demon → ปีศาจ/เดมอน, Undead → อันเดด, Wraith → เรธ, Slime → สไลม์, Goblin → ก็อบลิน, Troll → ทรอลล์, Vampire → แวมไพร์, Beastman → บีสต์แมน/มนุษย์ครึ่งสัตว์, Spirit → ภูต/จิตวิญญาณ, Fairy → แฟรี่/ภูตจิ๋ว, Lich → ลิช, Wyvern → ไวเวิร์น, Minotaur → มิโนทอร์, Mermaid/Siren → นางเงือก/ไซเรน, Homunculus → โฮมุนคุลุส/มนุษย์เทียม, Familiar → แฟมิเลียร์/สัตว์เลี้ยงเวทมนตร์, Mutant → มิวแทนต์/สัตว์กลายพันธุ์
-Locations: Dungeon → ดันเจี้ยน, Guild → กิลด์, Tavern → โรงเตี๊ยม, Castle → ปราสาท, Kingdom → อาณาจักร, Labyrinth → เขาวงกต, Sanctuary → สถานศักดิ์สิทธิ์, Ruins → ซากโบราณสถาน, Capital → เมืองหลวง, Empire → จักรวรรดิ, Frontier → ชายแดน/พรมแดน, Abyss → ขุมนรก/อะบิส, Territory → อาณาเขต/ดินแดน
-Game Systems: Level → เลเวล, Skill → สกิล, Quest → เควสต์, Party → ปาร์ตี้, Boss → บอส, HP/MP/EXP/AGI/STR/INT/DEX → keep as is, Magic → เวทมนตร์, Mana → มานา, Status Window → หน้าต่างสถานะ/สเตตัส, Inventory → ช่องเก็บของ/อินเวนทอรี, Title → ฉายา, Drop → ดรอป/ไอเทมดรอป, Potion → โพชั่น/น้ำยาฟื้นฟู, Equipment → อุปกรณ์สวมใส่/ยุทโธปกรณ์, Durability → ค่าความทนทาน, Buff/Debuff → บัฟ/ดีบัฟ
-Classes/Professions: Knight → อัศวิน, Mage/Wizard → นักเวทย์/จอมเวท, Rogue → โร้ก, Healer → นักรักษา, Archer → นักธนู, Paladin → พาลาดิน, Ranger → เรนเจอร์, Swordsman → นักดาบ, Cleric → นักบวช/เคลริค, Assassin → นักฆ่า/แอสซาซิน, Necromancer → เนโครแมนเซอร์/ผู้ใช้เวทมนตร์ดำ, Alchemist → นักเล่นแร่แปรธาตุ, Blacksmith → ช่างตีเหล็ก, Merchant → พ่อค้า, Summoner → ผู้อัญเชิญ/ซัมมอนเนอร์
-Ranks/Titles: Rank S/A/B/C/D/E/F → แรงก์ S/A/B/C/D/E/F, Hero → ผู้กล้า, Demon Lord → จอมมาร, Guild Master → กิลด์มาสเตอร์/หัวหน้ากิลด์, Noble → ขุนนาง, Duke/Marquis/Count/Viscount/Baron → ดยุก/มาร์ควิส/เคานต์/ไวเคานต์/บารอน, Commoner → สามัญชน
-Magic/Elements: Spell → คาถา/บทเวท, Incantation → คำร่าย, Magic Circle → วงเวท/วงแหวนเวทมนตร์, Attribute/Element → ธาตุ, Light/Dark → ธาตุแสง/ธาตุความมืด` + SHARED_IDIOMS
+        desc: 'นิยายแฟนตาซี isekai RPG เวทมนตร์ การผจญภัย เน้นศัพท์เกม/RPG และบรรยากาศโลกแฟนตาซี',
+        temperature: 0.25, top_p: 0.9, frequency_penalty: 0.05, presence_penalty: 0.03,
+        prompt: `You are an expert English-to-Thai fantasy and adventure novel translator.
+Use immersive, vivid Thai while preserving the source tone and pacing. Dialogue must reflect only the relationships and social rank actually supported by context. Keep RPG interface labels concise and familiar to Thai readers.`
     },
-
     ROMANCE: {
         name: '💕 โรแมนติก / ดราม่า',
-        desc: 'นิยายรัก ดราม่า ความสัมพันธ์ เน้นอารมณ์ภายใน หัวใจสั่น และบทสนทนาที่ซึ้งกินใจ',
-        temperature: 0.4, top_p: 0.92, frequency_penalty: 0.05, presence_penalty: 0.08,
-        prompt: `You are a professional expert in translating English romantic drama novels into Thai, in the style of popular Thai translated romance novels.
-
-Translation Rules (must be strictly followed):
-
-Style: Capture the full emotional weight — heart-fluttering, heartbreaking, tender, or tension-filled. The language should feel warm, natural, and resonate with Thai readers of romance novels. Avoid stiff or clinical phrasing.
-Dialogue: Match the emotional register exactly. Use natural Thai romantic speech patterns. Vary pronouns to reflect intimacy levels:
-  - Early/distant: ผม/คุณ, ฉัน/คุณ
-  - Growing closeness: เธอ, แก, มึง/กู (only if the original is explicitly crude/playful)
-  - Intimate/affectionate: หนู, ที่รัก, หวานใจ, ชื่อเล่น as appropriate
-Inner Monologue: Render internal thoughts naturally — Thai readers expect rich, introspective narration. Use italics-equivalent dashes (—) or clearly set apart the thought.
-Structure: Maintain paragraph breaks and emotional pacing. Never rush a tender or dramatic scene.
-Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only. For nicknames or pet names, find a Thai equivalent that carries the same warmth.
-Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
-Output: Provide only the Thai translation. No additional explanations.
-
-Romantic & Emotional Vocabulary:
-
-Feelings/Sensations: flutter → หัวใจสั่น/ใจหวิว, ache → เจ็บปวดลึกๆ, longing → ความคิดถึง/โหยหา, warmth → ความอบอุ่น, butterflies → ใจสั่น/ตื่นเต้นจนใจจะหล่น, heartbeat → เสียงหัวใจ/การเต้นของหัวใจ, blush → หน้าแดง/แก้มร้อน, shiver → สั่น/ขนลุก (from emotion), gaze → สายตา/แววตา, stare → จ้องมอง
-Relationship Terms: soulmate → คนที่ใช่/เนื้อคู่, chemistry → ความเข้ากัน/ประกายระหว่างกัน, confession → การสารภาพรัก, rejection → การปฏิเสธ, jealousy → ความหึงหวง, possessive → หวงแหน/ครอบครอง, clingy → ติดพัน/ไม่ยอมห่าง, fall for → หลงรัก/ตกหลุมรัก, let go → ปล่อยวาง/ปล่อยเขาไป/ปล่อยเธอไป
-Dramatic Expressions: silence stretched between them → ความเงียบแผ่ขยายระหว่างทั้งสอง, words caught in her throat → คำพูดติดอยู่ในลำคอ, heart clenched → หัวใจบีบตัว, breath hitched → หยุดหายใจชั่วขณะ, eyes stung → ตาแสบ (ก่อนจะร้องไห้)
-
-Tone Guidance:
-
-Tender scenes: Use soft, flowing sentences. Let emotions breathe.
-Tense/conflict scenes: Shorter sentences. Sharp dialogue. Feel the friction.
-Reconciliation/climax: Build rhythm gradually. Let the release feel earned.` + SHARED_IDIOMS
+        desc: 'นิยายรัก ดราม่า ความสัมพันธ์ เน้นอารมณ์ภายในและบทสนทนาที่เป็นธรรมชาติ',
+        temperature: 0.32, top_p: 0.92, frequency_penalty: 0.03, presence_penalty: 0.03,
+        prompt: `You are an expert English-to-Thai romance and drama novel translator.
+Use warm, fluid, emotionally precise Thai. Preserve subtext, hesitation, intimacy, conflict, and internal monologue without exaggerating them. Never make dialogue rougher, sweeter, or more intimate than the source supports.`
     },
-
     ACTION: {
         name: '🥊 แอ็กชัน / ต่อสู้',
-        desc: 'นิยายแอ็กชัน การต่อสู้ ศิลปะการป้องกันตัว เน้นประโยคกระชับ จังหวะเร็ว และความเข้มข้น',
-        temperature: 0.3, top_p: 0.88, frequency_penalty: 0.15, presence_penalty: 0.1,
-        prompt: `You are a professional expert in translating English action and martial arts novels into Thai.
-
-Translation Rules (must be strictly followed):
-
-Style: Fast-paced, punchy, and kinetic. Action sequences use short, sharp sentences to drive momentum. Descriptive passages may be longer to build tension — but never slow the rhythm of a fight.
-Dialogue: Direct and forceful. Characters under pressure speak in fragments. Use Thai pronouns that carry authority or aggression as appropriate (ข้า, กู, มึง for brutal/rough characters; ผม/ฉัน for composed ones).
-Structure: Preserve every paragraph break. In fight scenes, single-sentence paragraphs are intentional — keep them.
-Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only.
-Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
-Output: Provide only the Thai translation. No additional explanations.
-
-Action & Combat Vocabulary:
-
-Movement: dash → พุ่งตัว, dodge → หลบ/หลีก, lunge → พุ่งเข้าใส่, parry → รับ/ป้องกัน, block → สกัด, counter → โต้กลับ, evade → หลบหลีก, weave → ร่อน/เคลื่อนไหวหลบ, charge → พุ่งเข้าใส่/บุกทะลวง, retreat → ถอยร่น, stance → ท่วงท่า/ท่ายืน
-Strikes: punch → หมัด, kick → เตะ, slam → ฟาด, crush → บดขยี้, slash → ฟัน, stab → แทง, jab → แย็บ, hook → ฮุค, uppercut → อัปเปอร์คัต, sweep → กวาด, headbutt → โขกหัว
-Impact Words: crack → แตกสลาย/กระหึ่ม, shatter → แตกเป็นเสี่ยงๆ, explode → ระเบิด, crumble → พังทลาย, snap → หัก, tear → ฉีก, pierce → ทะลุทะลวง, rip → ฉีกขาด
-Body/Pain: blood → เลือด, wound → บาดแผล, bruise → รอยช้ำ, fracture → กระดูกแตก/ร้าว, numb → ชา, adrenaline → อะดรีนาลีน/ความตื่นตัว, instinct → สัญชาตญาณ, exhausted → ร่างกายพัง/หมดแรง
-Martial Arts Styles (transliterate, do not translate): Muay Thai → มวยไทย, Judo → ยูโด, Karate → คาราเต้, Taekwondo → เทควันโด, Boxing → มวยสากล, Wrestling → มวยปล้ำ, BJJ/Jiu-Jitsu → บีเจเจ/ยิวยิตสู, Kung Fu → กังฟู, Kendo → เคนโด้, Capoeira → คาโปเอรา
-Weapons: sword → ดาบ, blade → ใบมีด/คมดาบ, spear → หอก, axe → ขวาน, bow → ธนู, shield → โล่, gun → ปืน, rifle → ปืนไรเฟิล, knife → มีด, chain → โซ่
-
-Pacing Rules:
-
-Fight sequences: prefer short sentences (5–12 words). One action per sentence.
-Tension build-up: medium sentences, slow down with sensory detail.
-Decisive moments (killing blow, turning point): one stark sentence. Let it land.` + SHARED_IDIOMS
+        desc: 'นิยายแอ็กชันและการต่อสู้ เน้นจังหวะชัด กระชับ และรักษาลำดับการเคลื่อนไหว',
+        temperature: 0.24, top_p: 0.88, frequency_penalty: 0.07, presence_penalty: 0.03,
+        prompt: `You are an expert English-to-Thai action and martial-arts novel translator.
+Keep action clear, kinetic, and easy to visualize. Preserve the exact order, cause, target, and result of each movement. Use short Thai sentences when the source is fast, but do not split or compress information unnecessarily.`
     },
-
     SPORTS: {
         name: '🏆 กีฬา',
-        desc: 'นิยายกีฬา การแข่งขัน ทีม ความมุ่งมั่น เน้นบรรยากาศสนาม ศัพท์เทคนิค และแรงบันดาลใจ',
-        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.08,
-        prompt: `You are a professional expert in translating English sports novels and manga into Thai.
-
-Translation Rules (must be strictly followed):
-
-Style: Energetic, passionate, and inspiring. Match the sport's rhythm — football scenes feel different from chess matches. Capture the crowd noise, the sweat, the stakes. Motivational speeches should stir the reader.
-Dialogue: Natural and spirited. Teammates use casual, warm Thai (เฮ้ย, ว่ะ, นาย, เพื่อน). Coaches may use more formal or commanding language. Rivals speak with edge.
-Commentary/Narration: When describing live play, use present-tense energy even if the source is past tense — this mirrors Thai sports broadcasting style.
-Structure: Maintain paragraph breaks. Slow-motion key moments are intentional — preserve their weight.
-Proper Names: On first occurrence, use "Thai name (English name)"; afterward, use English only. Keep sport-specific position names in English where Thai audiences know them (e.g., striker, setter).
-Format: Do not use Markdown, emojis, or special symbols. Use only plain text and standard Thai punctuation.
-Output: Provide only the Thai translation. No additional explanations.
-
-Universal Sports Vocabulary:
-
-General: match/game → การแข่งขัน/เกม, tournament → ทัวร์นาเมนต์/รายการแข่งขัน, championship → ชิงแชมป์, final → รอบชิงชนะเลิศ, score → สกอร์/คะแนน, win → ชนะ, lose → แพ้, draw/tie → เสมอ, comeback → การกลับมา, underdog → ทีมรอง/คนที่ไม่มีใครคาดหวัง, momentum → โมเมนตัม/พลังเกม, pressure → ความกดดัน, clutch → ทำได้ในนาทีสำคัญ, overtime/extra time → ต่อเวลา, penalty → จุดโทษ/โทษ, foul → ฟาวล์/ผิดกติกา
-Team Dynamics: captain → กัปตัน, coach → โค้ช, rookie → มือใหม่/น้องใหม่, veteran → ทหารผ่านศึก/ผู้มีประสบการณ์, bench → ม้านั่งสำรอง, substitute → ตัวสำรอง, formation → รูปแบบทีม/ฟอร์เมชัน, strategy → กลยุทธ์, chemistry → ความเข้าหากัน/เล่นกันได้
-Performance: peak/in the zone → ฟอร์มดี/อยู่ในจุดที่ดีที่สุด, slump → ฟอร์มตก, warm up → วอร์มอัพ, fatigue → ล้า/อ่อนเพลีย, adrenaline → อะดรีนาลีน, instinct → สัญชาตญาณ, reflexes → รีเฟล็กซ์/ปฏิกิริยาตอบสนอง, endurance → ความอึด, stamina → สแตมมิน่า/ความทนทาน
-
-Football/Soccer: goal → ประตู, offside → ล้ำหน้า, header → โหม่ง, dribble → เลี้ยงบอล, pass → ส่งบอล, cross → เซ็นเตอร์, volley → วอลเลย์, free kick → เตะฟรีคิก, corner → เตะมุม, goalkeeper/keeper → ผู้รักษาประตู, striker → กองหน้า, midfielder → กองกลาง, defender → กองหลัง, hat-trick → แฮตทริก
-
-Basketball: dunk → ดังค์, three-pointer → ยิงสาม, layup → เลย์อัพ, rebound → รีบาวด์, assist → แอสซิสต์, block → บล็อก, steal → สกัดบอล, fast break → บุกเร็ว, pick and roll → พิกแอนด์โรล, point guard → พอยต์การ์ด, power forward → พาวเวอร์ฟอร์เวิร์ด, center → เซนเตอร์
-
-Baseball/Softball: pitch → ขว้าง, hit → ตี, home run → โฮมรัน, strikeout → สไตรค์เอาท์, batter → ผู้ตี, pitcher → นักขว้าง, catcher → ผู้รับ, inning → อินนิ่ง, base → เบส, double play → ดับเบิ้ลเพลย์
-
-Tennis/Badminton: serve → เสิร์ฟ, rally → โต้กันยาว, ace → เอซ, fault → ฟอลต์, deuce → ดิวซ์, match point → แมตช์พอยต์, forehand/backhand → โฟร์แฮนด์/แบ็คแฮนด์, smash → สแมช, drop shot → ดรอปช็อต, net → เน็ต
-
-Swimming/Athletics: lap → รอบ/แลป, stroke → สโตรก, heat → รอบคัดเลือก, sprint → สปรินต์, relay → ผลัด, personal best (PB) → สถิติส่วนตัว, world record (WR) → สถิติโลก, lane → เลน, finish line → เส้นชัย
-
-Tone Guidance:
-
-Live action/play-by-play: Short sentences, present-tense energy, exclamation where earned.
-Training/growth scenes: Reflective tone, inner struggle, show the grind.
-Team speech / motivational moment: Build to a peak. Thai readers love earnest emotion — do not underplay it.` + SHARED_IDIOMS
+        desc: 'นิยายกีฬา การแข่งขัน ทีม และการพัฒนา เน้นศัพท์กีฬาและอารมณ์ของสนาม',
+        temperature: 0.25, top_p: 0.9, frequency_penalty: 0.05, presence_penalty: 0.03,
+        prompt: `You are an expert English-to-Thai sports fiction translator.
+Use accurate sport-specific terminology and energetic Thai while preserving the original tense and viewpoint. Use live-commentary energy only when the source itself is written as live play-by-play.`
     }
 };
 
@@ -608,32 +478,73 @@ const MODE_CONFIG = {
     NOVEL: {
         name: 'นิยาย/วรรณกรรม',
         desc: 'เหมาะสำหรับนิยาย เรื่องสั้น งานเขียนสร้างสรรค์ เน้นอารมณ์ บทสนทนา และบรรยากาศ',
-        temperature: 0.3, top_p: 0.9, frequency_penalty: 0.1, presence_penalty: 0.1,
-        prompt: null  // resolved dynamically from GENRE_CONFIG
+        temperature: 0.25, top_p: 0.9, frequency_penalty: 0.05, presence_penalty: 0.03,
+        prompt: null
     },
     ACADEMIC: {
         name: 'วิชาการ/บทความ',
-        desc: 'เหมาะสำหรับบทความวิชาการ รายงาน เอกสารทางการ เน้นความแม่นยำและศัพท์เฉพาะสาขา',
-        temperature: 0.3, top_p: 0.85, frequency_penalty: 0.05, presence_penalty: 0.05,
-        prompt: `You are a professional academic translator specializing in English-to-Thai translation of scholarly and technical texts.
-
-Translation Rules (must be strictly followed):
-
-Style: Formal academic Thai. Preserve technical precision over literary flair. Maintain the logical structure and argumentative flow of the original.
-Terminology: Keep established technical terms in English on first use, followed by Thai equivalent in parentheses, e.g., "machine learning (การเรียนรู้ของเครื่อง)". On subsequent uses, Thai term alone is acceptable.
-Citations & References: Do not translate author names, journal names, or citation formats. Keep them exactly as in the original.
-Numbers & Units: Keep all numbers, units, percentages, and statistics exactly as written.
-Structure: Preserve all headings, subheadings, paragraph structure, bullet points, and numbered lists exactly.
-Format: Do not add or remove Markdown. Mirror the formatting of the source precisely.
-Output: Provide only the Thai translation. No explanations or commentary.
-
-Academic Vocabulary Guidance:
-
-Research terms: hypothesis → สมมติฐาน, methodology → วิธีวิทยา/ระเบียบวิธีวิจัย, findings → ผลการวิจัย, analysis → การวิเคราะห์, framework → กรอบแนวคิด, variable → ตัวแปร, correlation → สหสัมพันธ์, significance → นัยสำคัญ, sample → กลุ่มตัวอย่าง, literature review → การทบทวนวรรณกรรม
-Hedging language: suggest → ชี้ให้เห็น/บ่งชี้, indicate → ระบุ/แสดงให้เห็น, appear to → ดูเหมือนจะ, may/might → อาจจะ, tend to → มีแนวโน้มที่จะ, arguably → อาจกล่าวได้ว่า
-Connectors: furthermore → ยิ่งไปกว่านั้น, however → อย่างไรก็ตาม, therefore → ดังนั้น, consequently → ด้วยเหตุนี้, in contrast → ในทางตรงกันข้าม, notably → ที่น่าสังเกตคือ`
+        desc: 'เหมาะสำหรับบทความวิชาการ รายงาน และเอกสารทางการ เน้นความแม่นยำและโครงสร้าง',
+        temperature: 0.15, top_p: 0.82, frequency_penalty: 0.0, presence_penalty: 0.0,
+        prompt: `You are an expert English-to-Thai academic and technical translator.
+Use formal, precise, readable academic Thai. Preserve claims, hedging, logical relationships, headings, lists, equations, citations, author names, journal names, numbers, units, symbols, and reference formats exactly. Prefer Thai terminology followed by the established English term in parentheses on first useful occurrence; do not repeatedly add English when it has already appeared in the supplied context.`
     }
 };
+
+// One canonical Thai rendering per built-in term prevents the model from
+// alternating between several slash-separated options across chunks.
+const TERMINOLOGY_MAPS = {
+    FANTASY: {
+        'golem':'โกเลม','dragon':'มังกร','orc':'ออร์ค','elf':'เอลฟ์','dwarf':'ดวาร์ฟ','demon':'ปีศาจ','undead':'อันเดด','wraith':'เรธ','slime':'สไลม์','goblin':'ก็อบลิน','troll':'ทรอลล์','vampire':'แวมไพร์','lich':'ลิช','wyvern':'ไวเวิร์น','minotaur':'มิโนทอร์','homunculus':'โฮมุนคุลุส','familiar':'สัตว์อัญเชิญ',
+        'dungeon':'ดันเจี้ยน','guild':'กิลด์','tavern':'โรงเตี๊ยม','castle':'ปราสาท','kingdom':'อาณาจักร','labyrinth':'เขาวงกต','sanctuary':'สถานศักดิ์สิทธิ์','capital':'เมืองหลวง','empire':'จักรวรรดิ','abyss':'อะบิส',
+        'level':'เลเวล','skill':'สกิล','quest':'เควสต์','party':'ปาร์ตี้','boss':'บอส','mana':'มานา','status window':'หน้าต่างสถานะ','inventory':'ช่องเก็บของ','potion':'โพชั่น','durability':'ค่าความทนทาน','buff':'บัฟ','debuff':'ดีบัฟ',
+        'knight':'อัศวิน','mage':'จอมเวท','wizard':'จอมเวท','rogue':'โร้ก','healer':'นักรักษา','archer':'นักธนู','paladin':'พาลาดิน','ranger':'เรนเจอร์','swordsman':'นักดาบ','cleric':'นักบวช','assassin':'นักฆ่า','necromancer':'เนโครแมนเซอร์','alchemist':'นักเล่นแร่แปรธาตุ','blacksmith':'ช่างตีเหล็ก','summoner':'ผู้อัญเชิญ',
+        'demon lord':'จอมมาร','guild master':'กิลด์มาสเตอร์','duke':'ดยุก','marquis':'มาร์ควิส','count':'เคานต์','viscount':'ไวเคานต์','baron':'บารอน','magic circle':'วงเวท','incantation':'คำร่าย'
+    },
+    ROMANCE: {
+        'soulmate':'เนื้อคู่','confession':'การสารภาพรัก','rejection':'การปฏิเสธ','jealousy':'ความหึงหวง','possessive':'หวงแหน','fall for':'ตกหลุมรัก','heartbeat':'เสียงหัวใจ','blush':'หน้าแดง','longing':'ความโหยหา'
+    },
+    ACTION: {
+        'dash':'พุ่งตัว','dodge':'หลบ','lunge':'พุ่งเข้าใส่','parry':'ปัดป้อง','counter':'โต้กลับ','evade':'หลบหลีก','retreat':'ถอยร่น','stance':'ท่าต่อสู้','jab':'แย็บ','hook':'ฮุค','uppercut':'อัปเปอร์คัต','headbutt':'โขกศีรษะ','muay thai':'มวยไทย','judo':'ยูโด','karate':'คาราเต้','taekwondo':'เทควันโด','boxing':'มวยสากล','wrestling':'มวยปล้ำ','jiu-jitsu':'ยิวยิตสู','kung fu':'กังฟู','kendo':'เคนโด้','capoeira':'คาโปเอรา'
+    },
+    SPORTS: {
+        'tournament':'ทัวร์นาเมนต์','championship':'การแข่งขันชิงแชมป์','comeback':'การกลับมา','underdog':'ทีมรอง','momentum':'โมเมนตัม','overtime':'ช่วงต่อเวลา','captain':'กัปตัน','coach':'โค้ช','rookie':'ผู้เล่นหน้าใหม่','substitute':'ตัวสำรอง','formation':'ฟอร์เมชัน','warm up':'วอร์มอัพ','offside':'ล้ำหน้า','header':'โหม่ง','dribble':'เลี้ยงบอล','free kick':'ลูกฟรีคิก','goalkeeper':'ผู้รักษาประตู','striker':'กองหน้า','midfielder':'กองกลาง','defender':'กองหลัง','hat-trick':'แฮตทริก','dunk':'ดังค์','three-pointer':'ลูกสามคะแนน','layup':'เลย์อัพ','rebound':'รีบาวด์','assist':'แอสซิสต์','fast break':'เกมบุกเร็ว','home run':'โฮมรัน','strikeout':'สไตรก์เอาต์','match point':'แมตช์พอยต์','personal best':'สถิติส่วนตัว','world record':'สถิติโลก'
+    },
+    ACADEMIC: {
+        'hypothesis':'สมมติฐาน','methodology':'ระเบียบวิธีวิจัย','findings':'ผลการวิจัย','analysis':'การวิเคราะห์','framework':'กรอบแนวคิด','variable':'ตัวแปร','correlation':'สหสัมพันธ์','statistical significance':'นัยสำคัญทางสถิติ','sample':'กลุ่มตัวอย่าง','literature review':'การทบทวนวรรณกรรม'
+    }
+};
+
+function getActivePrompt() {
+    const specific = currentTranslationMode === 'NOVEL'
+        ? GENRE_CONFIG[currentGenre].prompt
+        : MODE_CONFIG[currentTranslationMode].prompt;
+    return `${specific}\n${BASE_TRANSLATION_RULES}`;
+}
+
+function getActiveConfig() {
+    return currentTranslationMode === 'NOVEL'
+        ? GENRE_CONFIG[currentGenre]
+        : MODE_CONFIG[currentTranslationMode];
+}
+
+function getChunkWordLimit() {
+    return CHUNK_WORD_LIMITS[currentTranslationMode] || CHUNK_WORD_LIMITS.NOVEL;
+}
+
+function containsTerm(text, term) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^A-Za-z0-9])${escaped}([^A-Za-z0-9]|$)`, 'i').test(text);
+}
+
+function buildRelevantTerminologyBlock(text) {
+    const map = currentTranslationMode === 'ACADEMIC'
+        ? TERMINOLOGY_MAPS.ACADEMIC
+        : TERMINOLOGY_MAPS[currentGenre];
+    if (!map) return '';
+    const matches = Object.entries(map).filter(([term]) => containsTerm(text, term));
+    if (matches.length === 0) return '';
+    return `\n\nRelevant terminology for this chunk (use consistently when context matches):\n${matches.map(([en, th]) => `- ${en} → ${th}`).join('\n')}`;
+}
 
 // ==================== GLOBAL STATE ====================
 let extractedText = '';
@@ -699,16 +610,6 @@ function setGenre(genre) {
     document.getElementById('translateLabel').textContent = `เริ่มแปล (${gc.name})`;
 }
 
-function getActivePrompt() {
-    if (currentTranslationMode === 'NOVEL') return GENRE_CONFIG[currentGenre].prompt;
-    return MODE_CONFIG[currentTranslationMode].prompt;
-}
-
-function getActiveConfig() {
-    if (currentTranslationMode === 'NOVEL') return GENRE_CONFIG[currentGenre];
-    return MODE_CONFIG[currentTranslationMode];
-}
-
 function switchInputTab(tab) {
     currentInputMode = tab;
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
@@ -752,6 +653,103 @@ fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.
 function showLoading(msg = 'กำลังประมวลผล...') { loadingText.textContent = msg; loadingOverlay.classList.add('visible'); }
 function hideLoading() { loadingOverlay.classList.remove('visible'); }
 
+function median(values) {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+async function extractPdfPageLines(page) {
+    const textContent = await page.getTextContent();
+    const items = textContent.items
+        .filter(item => item.str && item.str.trim())
+        .map(item => ({
+            text: item.str,
+            x: item.transform?.[4] || 0,
+            y: item.transform?.[5] || 0,
+            width: item.width || 0,
+            height: Math.abs(item.height || item.transform?.[3] || 10)
+        }))
+        .sort((a, b) => Math.abs(b.y - a.y) > 2.5 ? b.y - a.y : a.x - b.x);
+
+    const groups = [];
+    for (const item of items) {
+        let line = groups.find(g => Math.abs(g.y - item.y) <= Math.max(2.5, item.height * 0.25));
+        if (!line) {
+            line = { y: item.y, items: [] };
+            groups.push(line);
+        }
+        line.items.push(item);
+    }
+
+    groups.sort((a, b) => b.y - a.y);
+    return groups.map(group => {
+        const sorted = group.items.sort((a, b) => a.x - b.x);
+        let value = '';
+        let previousEnd = null;
+        for (const item of sorted) {
+            const gap = previousEnd === null ? 0 : item.x - previousEnd;
+            const needsSpace = value && !/\s$/.test(value) && !/^[,.;:!?%)\]}]/.test(item.text) && gap > 1.5;
+            value += (needsSpace ? ' ' : '') + item.text;
+            previousEnd = item.x + item.width;
+        }
+        return { y: group.y, text: value.trim() };
+    }).filter(line => line.text);
+}
+
+function normalizeFurnitureKey(text) {
+    return text.toLowerCase().replace(/\d+/g, '#').replace(/\s+/g, ' ').trim();
+}
+
+function removeRepeatedPdfFurniture(pages) {
+    if (pages.length < 3) return pages;
+    const counts = new Map();
+    for (const lines of pages) {
+        const candidates = [...lines.slice(0, 2), ...lines.slice(-2)];
+        const unique = new Set(candidates.map(line => normalizeFurnitureKey(line.text)).filter(key => key.length >= 3));
+        unique.forEach(key => counts.set(key, (counts.get(key) || 0) + 1));
+    }
+    const threshold = Math.max(3, Math.ceil(pages.length * 0.55));
+    const repeated = new Set([...counts.entries()].filter(([, count]) => count >= threshold).map(([key]) => key));
+    return pages.map(lines => lines.filter((line, index) => {
+        const nearEdge = index < 2 || index >= lines.length - 2;
+        return !(nearEdge && repeated.has(normalizeFurnitureKey(line.text)));
+    }));
+}
+
+function pdfLinesToText(lines) {
+    if (!lines.length) return '';
+    const gaps = [];
+    for (let i = 1; i < lines.length; i++) {
+        const gap = lines[i - 1].y - lines[i].y;
+        if (gap > 0) gaps.push(gap);
+    }
+    const normalGap = median(gaps.filter(g => g < 80)) || 12;
+    let output = lines[0].text;
+    for (let i = 1; i < lines.length; i++) {
+        const previous = lines[i - 1];
+        const current = lines[i];
+        const gap = previous.y - current.y;
+        const paragraphBreak = gap > normalGap * 1.55 || /^(?:[-•▪◦]|\d+[.)]|[A-Z][A-Z\s]{4,})/.test(current.text);
+        if (/([A-Za-z])-$/.test(output) && /^[a-z]/.test(current.text)) {
+            output = output.slice(0, -1) + current.text;
+        } else {
+            output += (paragraphBreak ? '\n\n' : '\n') + current.text;
+        }
+    }
+    return output;
+}
+
+function normalizeExtractedText(text) {
+    return String(text || '')
+        .replace(/\r\n?/g, '\n')
+        .replace(/([A-Za-z])\-\n(?=[a-z])/g, '$1')
+        .replace(/[ \t]+$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 async function handleFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['docx', 'pdf', 'txt'].includes(ext)) return showError('กรุณาเลือกไฟล์ .docx, .pdf หรือ .txt เท่านั้น');
@@ -764,53 +762,44 @@ async function handleFile(file) {
     document.getElementById('progressWrap').classList.remove('visible');
     document.getElementById('resumeBanner').classList.remove('visible');
     showLoading(ext === 'pdf' ? 'กำลังอ่านไฟล์ PDF...' : ext === 'txt' ? 'กำลังอ่านข้อความ...' : 'กำลังอ่านไฟล์...');
+
     try {
         let text = '';
         const arrayBuffer = await file.arrayBuffer();
         if (ext === 'docx') {
             if (typeof mammoth === 'undefined') throw new Error('Mammoth library not loaded');
             const result = await mammoth.extractRawText({ arrayBuffer });
-            text = result.value.trim();
+            text = result.value;
         } else if (ext === 'txt') {
-            text = await file.text();
-            text = text.replace(/^\uFEFF/, '').trim();
+            text = (await file.text()).replace(/^\uFEFF/, '');
         } else {
             if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js library not loaded');
             const pdf = await pdfjsLib.getDocument({ arrayBuffer }).promise;
-            const fullText = [];
+            const pages = [];
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 loadingText.textContent = `กำลังอ่านหน้า ${pageNum} จาก ${pdf.numPages}...`;
                 const page = await pdf.getPage(pageNum);
-                const textContent = await page.getTextContent();
-                let pageLines = [], currentLine = '', prevY = null;
-                for (const item of textContent.items) {
-                    const curY = item.transform ? Math.round(item.transform[5]) : null;
-                    if (prevY !== null && curY !== null && Math.abs(curY - prevY) > 4) {
-                        if (currentLine.trim()) pageLines.push(currentLine.trim());
-                        currentLine = '';
-                    }
-                    const needsSpace = currentLine.length > 0 && !currentLine.endsWith(' ') && !/[.,!?)\-]$/.test(currentLine) && item.str.length > 0 && !item.str.startsWith(' ');
-                    currentLine += (needsSpace ? ' ' : '') + item.str;
-                    if (item.hasEOL) { if (currentLine.trim()) pageLines.push(currentLine.trim()); currentLine = ''; }
-                    prevY = curY;
-                }
-                if (currentLine.trim()) pageLines.push(currentLine.trim());
-                fullText.push(pageLines.join('\n').trim());
+                pages.push(await extractPdfPageLines(page));
                 page.cleanup();
-                if (pageNum % 5 === 0) await sleep(50);
+                if (pageNum % 5 === 0) await sleep(25);
             }
-            text = fullText.join('\n\n').trim();
+            text = removeRepeatedPdfFurniture(pages).map(pdfLinesToText).join('\n\n');
         }
+
+        text = normalizeExtractedText(text);
         hideLoading();
-        if (!text) return showError('ไม่พบข้อความในไฟล์นี้ (อาจเป็นไฟล์ภาพหรือป้องกัน)');
+        if (!text) return showError('ไม่พบข้อความในไฟล์นี้ (อาจเป็นไฟล์ภาพ สแกน หรือมีการป้องกัน)');
         processExtractedText(text, file.name);
-    } catch(err) { hideLoading(); showError('ไม่สามารถอ่านไฟล์ได้: ' + err.message); }
+    } catch (err) {
+        hideLoading();
+        showError('ไม่สามารถอ่านไฟล์ได้: ' + err.message);
+    }
 }
 
 function processExtractedText(text, sourceName) {
-    extractedText = text;
-    paragraphs = extractedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-    currentJobId = generateJobId(text);
+    extractedText = normalizeExtractedText(text);
+    paragraphs = extractedText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    currentJobId = generateJobId(extractedText);
     const preview = extractedText.slice(0, 2000) + (extractedText.length > 2000 ? '\n\n[... แสดง 2000 ตัวอักษรแรก ...]' : '');
     document.getElementById('sourceText').textContent = preview;
     document.getElementById('charCount').textContent = `${extractedText.length.toLocaleString()} ตัวอักษร · ${paragraphs.length} ย่อหน้า`;
@@ -824,32 +813,87 @@ function processExtractedText(text, sourceName) {
 }
 
 // ==================== UTILITIES ====================
-function countWords(text) { return text.trim().split(/\s+/).filter(w => w.length > 0).length; }
-function showError(msg) { const box = document.getElementById('errorBox'); box.textContent = '⚠️ ' + msg; box.classList.add('visible'); setTimeout(() => box.classList.remove('visible'), 10000); }
+function countWords(text) {
+    const trimmed = String(text || '').trim();
+    return trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+}
+function countParagraphs(text) { return String(text || '').split(/\n\s*\n/).filter(p => p.trim()).length; }
+function showError(msg) { const box = document.getElementById('errorBox'); box.textContent = '⚠️ ' + msg; box.classList.add('visible'); setTimeout(() => box.classList.remove('visible'), 12000); }
 function clearError() { document.getElementById('errorBox').classList.remove('visible'); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-function getTrailingContext(text, maxChars = 400) {
+function splitSentences(text) {
+    const source = String(text || '');
+    if (!source.trim()) return [];
+    try {
+        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+            const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
+            const segments = [...segmenter.segment(source)].map(item => item.segment).filter(item => item.trim());
+            if (segments.length) return segments;
+        }
+    } catch (e) {}
+    return source.match(/[^.!?]+(?:[.!?]+["'’”)]*|$)/gs)?.filter(s => s.trim()) || [source];
+}
+
+function getTrailingContext(text, maxChars = 360) {
     if (!text) return '';
-    const sentences = text.match(/[^\n。.!?]+[。.!?\n]+/g) || [];
+    const sentences = splitSentences(text);
     let result = '';
     for (let i = sentences.length - 1; i >= 0; i--) {
-        if ((sentences[i] + result).length > maxChars) break;
-        result = sentences[i] + result;
+        const candidate = sentences[i] + result;
+        if (candidate.length > maxChars && result) break;
+        result = candidate.slice(-maxChars);
+        if (result.length >= maxChars) break;
     }
-    return result.trim() || text.slice(-maxChars);
+    return (result || String(text).slice(-maxChars)).trim();
 }
 
 function generateJobId(text) {
-    let hash = 0;
-    const sample = text.slice(0, 500) + text.length;
-    for (let i = 0; i < sample.length; i++) { hash = ((hash << 5) - hash) + sample.charCodeAt(i); hash |= 0; }
-    return 'job_' + Math.abs(hash).toString(36);
+    let hash = 2166136261;
+    const source = String(text || '');
+    for (let i = 0; i < source.length; i++) {
+        hash ^= source.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return 'job_' + (hash >>> 0).toString(36) + '_' + source.length.toString(36);
 }
 
 function formatEta(ms) {
-    if (ms < 60000) return `ประมาณ ${Math.ceil(ms / 1000)} วินาที`;
+    if (ms < 60000) return `ประมาณ ${Math.max(1, Math.ceil(ms / 1000))} วินาที`;
     return `ประมาณ ${Math.ceil(ms / 60000)} นาที`;
+}
+
+function getDynamicMaxTokens(text) {
+    const words = countWords(text);
+    const chars = String(text || '').length;
+    const estimate = Math.max(words * 4.8, chars * 0.95);
+    return Math.min(MAX_OUTPUT_TOKENS, Math.max(1400, Math.ceil(estimate)));
+}
+
+function normalizeNumberToken(token) {
+    return String(token).replace(/,/g, '').replace(/\s+/g, '').toLowerCase();
+}
+
+function extractProtectedTokens(text) {
+    const matches = String(text || '').match(/(?:\b\d{1,3}(?:,\d{3})+(?:\.\d+)?|\b\d+(?:\.\d+)?)(?:\s?%|\s?°[CF])?|\b(?:19|20)\d{2}\b/g) || [];
+    return matches.map(normalizeNumberToken);
+}
+
+function countTokenOccurrences(tokens) {
+    const counts = new Map();
+    tokens.forEach(token => counts.set(token, (counts.get(token) || 0) + 1));
+    return counts;
+}
+
+function findMissingProtectedTokens(original, translated) {
+    const sourceCounts = countTokenOccurrences(extractProtectedTokens(original));
+    const targetCounts = countTokenOccurrences(extractProtectedTokens(translated));
+    const missing = [];
+    for (const [token, count] of sourceCounts.entries()) {
+        const deficit = count - (targetCounts.get(token) || 0);
+        for (let i = 0; i < deficit; i++) missing.push(token);
+    }
+    return missing.slice(0, 12);
 }
 
 // ==================== CHECKPOINT SYSTEM ====================
@@ -858,31 +902,39 @@ function getCheckpointKey(jobId) { return CHECKPOINT_KEY_PREFIX + jobId; }
 function saveCheckpoint(jobId, chunks, completedIndex, parts, mode) {
     try {
         const data = {
-            jobId, mode, genre: currentGenre, totalChunks: chunks.length,
-            completedIndex, parts,
+            version: 2,
+            jobId,
+            mode,
+            genre: currentGenre,
+            chunkWordLimit: getChunkWordLimit(),
+            totalChunks: chunks.length,
+            completedIndex,
+            parts,
+            glossarySnapshot: glossaryRows.map(row => ({ ...row })),
+            relationshipSnapshot: document.getElementById('relationshipInput')?.value || '',
             savedAt: Date.now(),
             sourceName: document.getElementById('fileName').textContent
         };
         sessionStorage.setItem(getCheckpointKey(jobId), JSON.stringify(data));
-    } catch(e) { console.warn('Checkpoint save failed:', e); }
+    } catch (e) { console.warn('Checkpoint save failed:', e); }
 }
 
 function loadCheckpoint(jobId) {
     try {
         const raw = sessionStorage.getItem(getCheckpointKey(jobId));
         return raw ? JSON.parse(raw) : null;
-    } catch(e) { return null; }
+    } catch (e) { return null; }
 }
 
 function clearCheckpoint(jobId) {
-    try { sessionStorage.removeItem(getCheckpointKey(jobId)); } catch(e) {}
+    try { sessionStorage.removeItem(getCheckpointKey(jobId)); } catch (e) {}
 }
 
 function checkForCheckpoint() {
     if (!currentJobId) return;
     const cp = loadCheckpoint(currentJobId);
     if (!cp || cp.completedIndex <= 0) return;
-    const pct = Math.round((cp.completedIndex / cp.totalChunks) * 100);
+    const pct = Math.round((cp.completedIndex / Math.max(1, cp.totalChunks)) * 100);
     const ago = Math.round((Date.now() - cp.savedAt) / 60000);
     document.getElementById('resumeInfo').textContent =
         `แปลไปแล้ว ${cp.completedIndex} จาก ${cp.totalChunks} chunk (${pct}%) · บันทึกเมื่อ ${ago < 1 ? 'เมื่อกี้' : ago + ' นาทีที่แล้ว'}`;
@@ -896,7 +948,20 @@ async function resumeTranslation() {
     document.getElementById('resumeBanner').classList.remove('visible');
     setMode(cp.mode || currentTranslationMode);
     if (cp.genre) setGenre(cp.genre);
-    translatedParts = cp.parts || [];
+    if (Array.isArray(cp.glossarySnapshot)) {
+        glossaryRows = cp.glossarySnapshot;
+        renderGlossaryRows();
+        saveGlossary();
+    }
+    if (typeof cp.relationshipSnapshot === 'string') {
+        const relationship = document.getElementById('relationshipInput');
+        if (relationship) {
+            relationship.value = cp.relationshipSnapshot;
+            updateRelationshipCount();
+            saveRelationship();
+        }
+    }
+    translatedParts = Array.isArray(cp.parts) ? cp.parts.slice(0, cp.completedIndex) : [];
     await runTranslation(cp.completedIndex);
 }
 
@@ -983,21 +1048,31 @@ function updateGlossaryBadge() {
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ==================== GLOSSARY PROMPT BLOCK ====================
-function buildGlossaryPromptBlock() {
+function buildGlossaryPromptBlock(textForMatching = '') {
     const active = glossaryRows.filter(r => r.en.trim() && r.th.trim());
     if (active.length === 0) return '';
-    const lines = active.map(r => `- ${r.en.trim()} → ${r.th.trim()}`).join('\n');
-    return `\n\n📚 Custom Glossary (you MUST use exactly these translations — do not alter or deviate):\n${lines}`;
+    const relevant = active.length <= 30
+        ? active
+        : active.filter(row => containsTerm(textForMatching, row.en.trim()));
+    if (relevant.length === 0) return '';
+    const lines = relevant.map(r => `- ${r.en.trim()} → ${r.th.trim()}`).join('\n');
+    return `\n\nCustom glossary — mandatory exact renderings:\n${lines}`;
 }
 
 // ==================== RELATIONSHIP PROMPT BLOCK ====================
-function buildRelationshipPromptBlock() {
-    const text = (document.getElementById('relationshipInput')?.value || '').trim();
-    if (!text) return '';
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length === 0) return '';
-    const entries = lines.map(l => `- ${l}`).join('\n');
-    return `\n\n🧩 Character & World Context (use this background knowledge to translate accurately and consistently):\n${entries}`;
+function buildRelationshipPromptBlock(textForMatching = '') {
+    const raw = (document.getElementById('relationshipInput')?.value || '').trim();
+    if (!raw) return '';
+    const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
+    if (!lines.length) return '';
+
+    let selected = lines;
+    if (raw.length > 2200) {
+        const names = new Set((String(textForMatching).match(/\b[A-Z][A-Za-z'’-]{1,30}\b/g) || []).map(name => name.toLowerCase()));
+        const relevant = lines.filter(line => [...names].some(name => line.toLowerCase().includes(name)));
+        selected = relevant.length ? relevant : lines.slice(0, 20);
+    }
+    return `\n\nCharacter and world context — factual background, not text to translate:\n${selected.map(line => `- ${line}`).join('\n')}`;
 }
 
 function toggleRelationship() {
@@ -1061,72 +1136,138 @@ function initRelationship() {
 }
 
 // ==================== CHUNKING ====================
-function buildNovelChunks(paragraphs, maxWords) {
-    const chunks = [];
-    let current = [], currentWords = 0;
-    for (let i = 0; i < paragraphs.length; i++) {
-        const para = paragraphs[i];
-        const wordCount = countWords(para);
-        if (wordCount > maxWords) {
-            if (current.length > 0) { chunks.push({ text: current.join('\n\n') }); current = []; currentWords = 0; }
-            const sentences = para.match(/[^.!?]+[.!?]+/g) || [para];
-            let subChunk = [], subWords = 0;
-            for (const sent of sentences) {
-                const sw = countWords(sent);
-                if (subWords + sw > maxWords && subChunk.length > 0) { chunks.push({ text: subChunk.join(' ') }); subChunk = []; subWords = 0; }
-                subChunk.push(sent); subWords += sw;
-            }
-            if (subChunk.length > 0) chunks.push({ text: subChunk.join(' ') });
-        } else {
-            if (currentWords + wordCount > maxWords && current.length > 0) { chunks.push({ text: current.join('\n\n') }); current = []; currentWords = 0; }
-            current.push(para); currentWords += wordCount;
+function splitOversizedSentence(sentence, maxWords) {
+    const words = String(sentence).trim().split(/\s+/).filter(Boolean);
+    const parts = [];
+    for (let i = 0; i < words.length; i += maxWords) parts.push(words.slice(i, i + maxWords).join(' '));
+    return parts;
+}
+
+function splitLongParagraph(paragraph, maxWords) {
+    const sentences = splitSentences(paragraph);
+    const pieces = [];
+    let current = [];
+    let currentWords = 0;
+
+    const flush = () => {
+        if (current.length) pieces.push(current.join(' ').trim());
+        current = [];
+        currentWords = 0;
+    };
+
+    for (const sentence of sentences) {
+        const sentenceWords = countWords(sentence);
+        if (sentenceWords > maxWords) {
+            flush();
+            pieces.push(...splitOversizedSentence(sentence, maxWords));
+            continue;
         }
+        if (currentWords + sentenceWords > maxWords && current.length) flush();
+        current.push(sentence.trim());
+        currentWords += sentenceWords;
     }
-    if (current.length > 0) chunks.push({ text: current.join('\n\n') });
+    flush();
+    return pieces.length ? pieces : [paragraph];
+}
+
+function buildTranslationChunks(sourceParagraphs, maxWords) {
+    const chunks = [];
+    let current = [];
+    let currentWords = 0;
+
+    const flush = () => {
+        if (current.length) chunks.push({ text: current.join('\n\n').trim() });
+        current = [];
+        currentWords = 0;
+    };
+
+    for (const rawParagraph of sourceParagraphs) {
+        const paragraph = rawParagraph.trim();
+        if (!paragraph) continue;
+        const paragraphWords = countWords(paragraph);
+
+        if (paragraphWords > maxWords) {
+            flush();
+            splitLongParagraph(paragraph, maxWords).forEach(piece => chunks.push({ text: piece }));
+            continue;
+        }
+
+        if (currentWords + paragraphWords > maxWords && current.length) flush();
+        current.push(paragraph);
+        currentWords += paragraphWords;
+    }
+    flush();
     return chunks;
 }
 
 // ==================== VALIDATION ====================
 function validateTranslation(original, translated) {
-    const issues = [];
-    if (!/[ก-๙]/.test(translated) && /[a-zA-Z]/.test(original)) issues.push('ไม่พบข้อความภาษาไทย');
-    if (/[*#`>|]/.test(translated)) issues.push('พบสัญลักษณ์จัดรูปแบบที่ไม่อนุญาต');
-    if (original.length >= 60) {
-        const ratio = translated.length / original.length;
-        const maxRatio = currentTranslationMode === 'ACADEMIC' ? 5.0 : 4.5;
-        if (ratio < 0.25 || ratio > maxRatio) issues.push(`ความยาวไม่สมเหตุสมผล (${ratio.toFixed(2)}x)`);
+    const critical = [];
+    const warnings = [];
+    const source = String(original || '').trim();
+    const target = String(translated || '').trim();
+
+    if (!target) critical.push('คำตอบว่างเปล่า');
+    if (!/[ก-๙]/.test(target) && /[A-Za-z]/.test(source)) critical.push('ไม่พบข้อความภาษาไทย');
+
+    if (currentTranslationMode === 'NOVEL' && /```|^\s*(?:Here is|Translation:|คำแปล[:：])/im.test(target)) {
+        critical.push('มีคำอธิบายหรือ Markdown ที่ไม่ใช่เนื้อหาคำแปล');
     }
-    const sysPhrases = ['คุณคือผู้เชี่ยวชาญ', 'rules for translation', 'here is the translation', 'translation rules'];
-    if (sysPhrases.some(p => translated.toLowerCase().includes(p))) issues.push('เนื้อหาเป็นคำอธิบายระบบ ไม่ใช่คำแปล');
-    return { valid: issues.length === 0, issues };
+
+    if (source.length >= 80) {
+        const ratio = target.length / source.length;
+        const minRatio = currentTranslationMode === 'ACADEMIC' ? 0.35 : 0.30;
+        const maxRatio = currentTranslationMode === 'ACADEMIC' ? 4.5 : 4.0;
+        if (ratio < minRatio || ratio > maxRatio) critical.push(`ความยาวผิดปกติ (${ratio.toFixed(2)}x)`);
+    }
+
+    const sourceParagraphs = countParagraphs(source);
+    const targetParagraphs = countParagraphs(target);
+    if (sourceParagraphs > 1) {
+        const difference = Math.abs(sourceParagraphs - targetParagraphs);
+        const allowed = Math.max(1, Math.floor(sourceParagraphs * 0.2));
+        if (difference > allowed) critical.push(`จำนวนย่อหน้าไม่ตรง ต้นฉบับ ${sourceParagraphs} / คำแปล ${targetParagraphs}`);
+        else if (difference > 0) warnings.push(`จำนวนย่อหน้าต่างกันเล็กน้อย (${sourceParagraphs}/${targetParagraphs})`);
+    }
+
+    const missingTokens = findMissingProtectedTokens(source, target);
+    if (missingTokens.length) critical.push(`ตัวเลขหรือค่าที่หาย: ${missingTokens.join(', ')}`);
+
+    const systemPhrases = ['rules for translation', 'here is the translation', 'translation rules', 'text to translate'];
+    if (systemPhrases.some(p => target.toLowerCase().includes(p))) critical.push('คำตอบมีข้อความจาก prompt ปะปน');
+
+    return { valid: critical.length === 0, critical, warnings };
 }
 
 // ==================== TYPOGRAPHY CLEANUP ====================
 function cleanThaiTypography(text) {
-    text = text.replace(/ +([ๆฯ,!?])/g, '$1');
-    text = text.replace(/"[ \t]+/g, '"').replace(/[ \t]+"/g, '"');
-    text = text.replace(/\([ \t]+/g, '(').replace(/[ \t]+\)/g, ')');
-    text = text.replace(/\.{3,}/g, '...');
-    const thaiUnits = 'กิโลเมตร|เมตร|เซนติเมตร|กิโลกรัม|กรัม|ลิตร|มิลลิลิตร|นาที|ชั่วโมง|วัน|สัปดาห์|เดือน|ปี|บาท|สตางค์';
-    text = text.replace(new RegExp(`(\\d)\\s+(${thaiUnits})`, 'g'), '$1\u00A0$2');
-    text = text.replace(/[ \t]+$/gm, '');
-    text = text.replace(/\n{3,}/g, '\n\n');
-    text = text.replace(/[ \t]{2,}/g, ' ');
-    return text.trim();
-}
-
-// ==================== OVERLAP HELPER ====================
-function getOverlapWords(text, wordCount = 50) {
-    if (!text) return '';
-    const words = text.trim().split(/\s+/);
-    if (words.length <= wordCount) return text.trim();
-    const tail = words.slice(-wordCount).join(' ');
-    const sentenceStart = tail.search(/(?<=[.!?]\s)\S/);
-    return sentenceStart > 0 ? tail.slice(sentenceStart) : tail;
+    let result = String(text || '').replace(/\r\n?/g, '\n');
+    result = result.replace(/"[ \t]+/g, '"').replace(/[ \t]+"/g, '"');
+    result = result.replace(/\([ \t]+/g, '(').replace(/[ \t]+\)/g, ')');
+    result = result.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n');
+    if (currentTranslationMode === 'NOVEL') {
+        result = result.replace(/ +([ๆฯ,!?])/g, '$1').replace(/[ \t]{2,}/g, ' ');
+    }
+    return result.trim();
 }
 
 // ==================== API TRANSLATION ====================
+function parseRetryAfter(value) {
+    if (!value) return null;
+    const seconds = Number(value);
+    if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+    const dateMs = Date.parse(value);
+    return Number.isFinite(dateMs) ? Math.max(0, dateMs - Date.now()) : null;
+}
+
+async function respectRequestGap() {
+    const wait = MIN_REQUEST_GAP_MS - (Date.now() - lastApiRequestAt);
+    if (wait > 0) await sleep(wait);
+    lastApiRequestAt = Date.now();
+}
+
 async function callTranslatorAPI(payload, timeoutMs = API_TIMEOUT_MS) {
+    await respectRequestGap();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -1138,80 +1279,146 @@ async function callTranslatorAPI(payload, timeoutMs = API_TIMEOUT_MS) {
         });
         const raw = await response.text();
         if (!response.ok) {
-            const shortBody = raw ? ` — ${raw.slice(0, 180)}` : '';
-            throw new Error(`API error: HTTP ${response.status}${shortBody}`);
+            const error = new Error(`API error: HTTP ${response.status}${raw ? ` — ${raw.slice(0, 180)}` : ''}`);
+            error.status = response.status;
+            error.retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
+            throw error;
         }
         try {
             return JSON.parse(raw);
-        } catch(e) {
+        } catch (e) {
             throw new Error('Invalid JSON response from API');
         }
     } catch (err) {
-        if (err.name === 'AbortError') throw new Error('API timeout — เซิร์ฟเวอร์ตอบช้าเกินไป');
+        if (err.name === 'AbortError') {
+            const timeoutError = new Error('API timeout — เซิร์ฟเวอร์ตอบช้าเกินไป');
+            timeoutError.status = 408;
+            throw timeoutError;
+        }
         throw err;
     } finally {
         clearTimeout(timer);
     }
 }
 
-async function translateChunk(text, context = {}, retries = 2) {
-    const config = getActiveConfig();
-    const systemPrompt = getActivePrompt() + buildGlossaryPromptBlock() + buildRelationshipPromptBlock();
+function shouldRetryError(error) {
+    if (!error?.status) return true;
+    return error.status === 408 || error.status === 429 || error.status >= 500;
+}
 
-    // Build user prompt with bilingual context + overlap hint
+function getRetryDelay(error, attempt) {
+    if (error?.retryAfterMs != null) return Math.min(30000, error.retryAfterMs);
+    return Math.min(15000, RETRY_DELAY * (2 ** attempt) + Math.random() * 400);
+}
+
+function buildTranslationUserPrompt(text, context, repairIssues = []) {
     const parts = [];
     if (context.enTail || context.thTail) {
-        parts.push('📌 Previous context (EN + TH) — use to maintain continuity. Do NOT re-translate this passage:');
-        if (context.enTail) parts.push(`[EN]: ${context.enTail}`);
-        if (context.thTail) parts.push(`[TH]: ${context.thTail}`);
-        parts.push('');
+        parts.push('[PREVIOUS CONTEXT — REFERENCE ONLY; DO NOT TRANSLATE OR REPEAT]');
+        if (context.enTail) parts.push(`Previous source:\n${context.enTail}`);
+        if (context.thTail) parts.push(`Previous Thai translation:\n${context.thTail}`);
+        parts.push('[/PREVIOUS CONTEXT]');
     }
-    if (context.overlapEN) {
-        parts.push('🔗 Tail of the previous chunk (for context only — do NOT translate again):');
-        parts.push(context.overlapEN);
-        parts.push('');
+    if (repairIssues.length) {
+        parts.push('[CORRECTION REQUIRED]');
+        parts.push('The previous attempt failed validation. Translate the source again and fix all of these issues:');
+        repairIssues.forEach(issue => parts.push(`- ${issue}`));
+        parts.push('[/CORRECTION REQUIRED]');
     }
-    parts.push('---');
-    parts.push('Text to translate:');
+    parts.push('[TEXT TO TRANSLATE]');
     parts.push(text);
-    const userPrompt = parts.join('\n');
+    parts.push('[/TEXT TO TRANSLATE]');
+    return parts.join('\n\n');
+}
+
+async function translateChunk(text, context = {}, retries = 2) {
+    const config = getActiveConfig();
+    const matchingText = `${text}\n${context.enTail || ''}`;
+    const systemPrompt = getActivePrompt()
+        + buildRelevantTerminologyBlock(text)
+        + buildGlossaryPromptBlock(matchingText)
+        + buildRelationshipPromptBlock(matchingText);
+    let repairIssues = [];
 
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             const data = await callTranslatorAPI({
-                max_tokens: 2048,
-                temperature: config.temperature, top_p: config.top_p,
-                frequency_penalty: config.frequency_penalty, presence_penalty: config.presence_penalty,
+                max_tokens: Math.min(MAX_OUTPUT_TOKENS, getDynamicMaxTokens(text) + attempt * 700),
+                temperature: config.temperature,
+                top_p: config.top_p,
+                frequency_penalty: config.frequency_penalty,
+                presence_penalty: config.presence_penalty,
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
+                    { role: 'user', content: buildTranslationUserPrompt(text, context, repairIssues) }
                 ]
             });
 
-            const content = data.choices?.[0]?.message?.content;
-            if (!content) {
-                if (attempt < retries) { await sleep(RETRY_DELAY); continue; }
-                throw new Error('Empty response from API');
+            const choice = data.choices?.[0];
+            const content = choice?.message?.content;
+            if (!content) throw new Error('Empty response from API');
+            if (choice.finish_reason === 'length') {
+                const lengthError = new Error('คำแปลถูกตัดเพราะ output token ไม่เพียงพอ');
+                lengthError.validationIssues = ['คำแปลถูกตัดกลางทาง ให้แปลใหม่ให้ครบทุกย่อหน้า'];
+                throw lengthError;
             }
 
-            const result = cleanThaiTypography(content.trim());
+            const result = cleanThaiTypography(content);
             const validation = validateTranslation(text, result);
-            if (!validation.valid && attempt < retries) {
-                if (validation.issues.includes('ไม่พบข้อความภาษาไทย')) { await sleep(RETRY_DELAY); continue; }
-                console.info('Non-critical validation, accepting:', validation.issues);
+            if (!validation.valid) {
+                const validationError = new Error(validation.critical.join(' | '));
+                validationError.validationIssues = validation.critical;
+                throw validationError;
             }
+            if (validation.warnings.length) console.info('Translation warnings:', validation.warnings);
             return result;
-
-        } catch(err) {
+        } catch (err) {
             console.warn(`Attempt ${attempt + 1} failed:`, err.message);
-            if (attempt === retries) throw err;
-            await sleep(RETRY_DELAY * (attempt + 1));
+            repairIssues = err.validationIssues || [];
+            if (attempt === retries || (!repairIssues.length && !shouldRetryError(err))) throw err;
+            await sleep(getRetryDelay(err, attempt));
         }
     }
     throw new Error('Translation failed after all retries');
 }
 
 // ==================== CONSISTENCY CHECK ====================
+function runLocalConsistencyChecks(enText, thText) {
+    const issues = [];
+    const missingNumbers = findMissingProtectedTokens(enText, thText);
+    if (missingNumbers.length) {
+        issues.push({ type: 'warn', term: 'ตัวเลข/ค่า', detail: `อาจมีค่าตกหล่น: ${missingNumbers.join(', ')}`, suggestion: 'ตรวจเทียบตัวเลข หน่วย เปอร์เซ็นต์ และปีจากต้นฉบับ' });
+    }
+
+    const activeGlossary = glossaryRows.filter(row => row.en.trim() && row.th.trim());
+    activeGlossary.forEach(row => {
+        if (containsTerm(enText, row.en.trim()) && !thText.includes(row.th.trim())) {
+            issues.push({ type: 'warn', term: row.en.trim(), detail: `ไม่พบคำแปลที่กำหนดว่า “${row.th.trim()}”`, suggestion: `ใช้ “${row.th.trim()}” ให้สม่ำเสมอ` });
+        }
+    });
+
+    const suspiciousEnglish = thText.match(/\b[A-Za-z]{4,}(?:\s+[A-Za-z]{4,}){3,}\b/g) || [];
+    if (suspiciousEnglish.length) {
+        issues.push({ type: 'warn', term: 'ข้อความอังกฤษตกค้าง', detail: suspiciousEnglish.slice(0, 2).join(' / ').slice(0, 180), suggestion: 'ตรวจว่าข้อความนี้เป็นชื่อเฉพาะ/ศัพท์เทคนิค หรือเป็นส่วนที่ยังไม่ได้แปล' });
+    }
+    return issues.slice(0, 20);
+}
+
+function sampleThreePositions(text, totalChars) {
+    const source = String(text || '');
+    if (source.length <= totalChars) return source;
+    const each = Math.floor(totalChars / 3);
+    const middleStart = Math.max(0, Math.floor(source.length / 2 - each / 2));
+    return source.slice(0, each)
+        + '\n\n[... middle sample ...]\n\n' + source.slice(middleStart, middleStart + each)
+        + '\n\n[... ending sample ...]\n\n' + source.slice(-each);
+}
+
+function buildConsistencySample(enText, thText, maxChars = 6000) {
+    const half = Math.floor(maxChars / 2);
+    return `[Source EN samples]:\n${sampleThreePositions(enText, half)}\n\n[Translation TH samples]:\n${sampleThreePositions(thText, half)}`;
+}
+
 async function runConsistencyCheck(btn) {
     const translationText = document.getElementById('translationDisplay').textContent;
     if (!translationText || translationText.includes('คำแปลจะปรากฏที่นี่')) return showError('ยังไม่มีคำแปลให้ตรวจสอบ');
@@ -1221,30 +1428,22 @@ async function runConsistencyCheck(btn) {
     panel.classList.add('visible');
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    const origText = btn.textContent;
+    const originalButtonText = btn.textContent;
     btn.disabled = true;
     btn.innerHTML = '<span class="consistency-spinner"></span>กำลังตรวจสอบ...';
     result.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">กำลังวิเคราะห์งานแปล...</div>';
 
-    const sample = buildConsistencySample(extractedText, translationText, 3000);
-
-    const prompt = `You are a quality assurance expert for English-to-Thai translations.
-
-Check the given translation for the following issues:
-
-Inconsistent rendering of character or place names (e.g., sometimes "Aria" vs. "Arria").
-Terms that should be transliterated but were incorrectly translated.
-Inconsistent tone or pronoun usage without justification.
-Sentences that still contain English mixed in.
-
-Respond in JSON only, with no additional text, using this format:
-{"issues": [{"type": "warn|ok", "term": "problematic term", "detail": "details", "suggestion": "recommendation"}], "summary": "one-sentence quality summary"}
-
-If no issues are found, return an empty issues array and a summary stating that the quality is good.`;
+    const localIssues = runLocalConsistencyChecks(extractedText, translationText);
+    const sample = buildConsistencySample(extractedText, translationText);
+    const prompt = `You are a quality-assurance reviewer for English-to-Thai translations.
+Review only the supplied samples. Identify clear problems involving inconsistent names or terminology, unjustified pronoun/tone changes, untranslated prose, omissions, or meaning errors. Do not flag legitimate English proper names, abbreviations, citations, or technical terms.
+Return JSON only in this exact structure:
+{"issues":[{"type":"warn","term":"problematic term","detail":"concise Thai explanation","suggestion":"concise Thai recommendation"}],"summary":"one concise Thai quality summary"}
+If no clear sampled issues exist, return an empty issues array.`;
 
     try {
         const data = await callTranslatorAPI({
-            max_tokens: 1000,
+            max_tokens: 1200,
             temperature: 0.1,
             messages: [
                 { role: 'system', content: prompt },
@@ -1252,45 +1451,41 @@ If no issues are found, return an empty issues array and a summary stating that 
             ]
         });
         const raw = data.choices?.[0]?.message?.content || '';
-        const cleaned = raw.replace(/```json|```/g, '').trim();
-        let parsed;
-        try { parsed = JSON.parse(cleaned); } catch(e) { throw new Error('Invalid result format'); }
-
+        const jsonText = raw.replace(/```json|```/gi, '').match(/\{[\s\S]*\}/)?.[0] || '';
+        if (!jsonText) throw new Error('Invalid result format');
+        const parsed = JSON.parse(jsonText);
+        parsed.issues = [...localIssues, ...(Array.isArray(parsed.issues) ? parsed.issues : [])].slice(0, 30);
         renderConsistencyResult(parsed);
-    } catch(err) {
-        result.innerHTML = `<div style="color:var(--error);font-size:14px">❌ ตรวจสอบไม่สำเร็จ: ${err.message}</div>`;
+    } catch (err) {
+        if (localIssues.length) {
+            renderConsistencyResult({ issues: localIssues, summary: 'ตรวจสอบอัตโนมัติในเครื่องสำเร็จ แต่ AI QA ไม่สามารถตอบกลับได้' });
+        } else {
+            result.innerHTML = `<div style="color:var(--error);font-size:14px">❌ ตรวจสอบไม่สำเร็จ: ${escHtml(err.message)}</div>`;
+        }
     } finally {
         btn.disabled = false;
-        btn.textContent = origText;
+        btn.textContent = originalButtonText;
     }
-}
-
-function buildConsistencySample(enText, thText, maxChars) {
-    const third = Math.floor(maxChars / 3);
-    const enSample = enText.slice(0, third) + (enText.length > third * 2 ? '\n\n[...]\n\n' + enText.slice(-Math.floor(third / 2)) : '');
-    const thSample = thText.slice(0, third) + (thText.length > third * 2 ? '\n\n[...]\n\n' + thText.slice(-Math.floor(third / 2)) : '');
-    return `[Source EN]:\n${enSample}\n\n[Translation TH]:\n${thSample}`;
 }
 
 function renderConsistencyResult(data) {
     const result = document.getElementById('consistencyResult');
-    const issues = data.issues || [];
+    const issues = Array.isArray(data.issues) ? data.issues : [];
     const summary = data.summary || '';
-
     let html = '';
-    if (summary) {
-        html += `<div style="font-size:14px;color:var(--text-muted);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">${summary}</div>`;
-    }
 
+    if (summary) {
+        html += `<div style="font-size:14px;color:var(--text-muted);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">${escHtml(summary)}</div>`;
+    }
     if (issues.length === 0) {
         html += `<div style="display:flex;align-items:center;gap:0.5rem;color:var(--success);font-size:14px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-            ไม่พบปัญหา Consistency ในงานแปลนี้
+            ไม่พบปัญหา Consistency ที่ชัดเจนในส่วนที่ตรวจ
         </div>`;
     } else {
         issues.forEach(issue => {
             html += `<div class="issue-row">
-                <span class="issue-badge ${issue.type === 'warn' ? 'badge-warn' : 'badge-ok'}">${issue.type === 'warn' ? '⚠ ตรวจสอบ' : '✓ OK'}</span>
+                <span class="issue-badge badge-warn">⚠ ตรวจสอบ</span>
                 <div>
                     <div class="issue-text"><strong>${escHtml(issue.term || '')}</strong> — ${escHtml(issue.detail || '')}</div>
                     ${issue.suggestion ? `<div class="issue-suggestion">💡 ${escHtml(issue.suggestion)}</div>` : ''}
@@ -1309,13 +1504,21 @@ async function runTranslation(startFromIndex = 0) {
     document.getElementById('translateIcon').style.display = 'none';
     clearError();
 
-    const chunks = buildNovelChunks(paragraphs, MAX_WORDS);
+    const chunks = buildTranslationChunks(paragraphs, getChunkWordLimit());
+    if (!chunks.length) {
+        showError('ไม่พบข้อความสำหรับแปล');
+        translateBtn.disabled = false;
+        return;
+    }
+    if (startFromIndex > chunks.length) startFromIndex = 0;
+
     const progressWrap = document.getElementById('progressWrap');
     const progressFill = document.getElementById('progressFill');
     const progressPct = document.getElementById('progressPct');
     const progressStatus = document.getElementById('progressStatus');
     const progressEta = document.getElementById('progressEta');
 
+    progressStatus.style.color = '';
     progressWrap.classList.add('visible');
     document.getElementById('resultGrid').style.display = 'grid';
     document.getElementById('sourceDisplay').textContent = extractedText;
@@ -1324,11 +1527,12 @@ async function runTranslation(startFromIndex = 0) {
         translatedParts = [];
         document.getElementById('translationDisplay').innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div>กำลังเริ่มต้นการแปล...</div>';
     } else {
+        translatedParts = translatedParts.slice(0, startFromIndex);
         document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
     }
 
-    lastTranslatedContext = translatedParts.length > 0 ? translatedParts[translatedParts.length - 1] : '';
-    lastChunkENContext = '';
+    lastTranslatedContext = startFromIndex > 0 ? translatedParts[startFromIndex - 1] || '' : '';
+    lastChunkENContext = startFromIndex > 0 ? chunks[startFromIndex - 1]?.text || '' : '';
     chunkTimings = [];
     let successCount = startFromIndex;
 
@@ -1340,27 +1544,24 @@ async function runTranslation(startFromIndex = 0) {
             progressPct.textContent = pct + '%';
             progressStatus.textContent = `กำลังแปลชิ้นที่ ${i + 1} จาก ${chunks.length}...`;
 
-            if (i > startFromIndex) await sleep(RATE_LIMIT_DELAY);
-
-            const ctx = {};
+            const context = {};
             if (lastChunkENContext) {
-                ctx.enTail = getTrailingContext(lastChunkENContext, 300);
-                ctx.thTail = getTrailingContext(lastTranslatedContext, 300);
-                ctx.overlapEN = getOverlapWords(lastChunkENContext, 50);
+                context.enTail = getTrailingContext(lastChunkENContext, 360);
+                context.thTail = getTrailingContext(lastTranslatedContext, 360);
             }
 
             let translated;
             try {
-                translated = await translateChunk(chunks[i].text, ctx);
-            } catch(chunkErr) {
+                translated = await translateChunk(chunks[i].text, context);
+            } catch (chunkError) {
                 saveCheckpoint(currentJobId, chunks, i, translatedParts, currentTranslationMode);
                 const partialText = translatedParts.join('\n\n').replace(/\n{3,}/g, '\n\n');
                 if (partialText) document.getElementById('translationDisplay').textContent = partialText;
                 progressStatus.textContent = `⚠️ หยุดที่ chunk ${i + 1} — บันทึกแล้ว ${successCount} chunk`;
                 progressStatus.style.color = 'var(--warn)';
                 progressEta.textContent = '';
-                showError(`แปลล้มเหลวที่ chunk ${i + 1}/${chunks.length}: ${chunkErr.message} — กดรีเฟรชเพื่อแปลต่อจากจุดนี้`);
-                throw chunkErr;
+                showError(`แปลล้มเหลวที่ chunk ${i + 1}/${chunks.length}: ${chunkError.message} — สามารถรีเฟรชแล้วแปลต่อได้`);
+                throw chunkError;
             }
 
             translatedParts.push(translated);
@@ -1369,13 +1570,13 @@ async function runTranslation(startFromIndex = 0) {
             successCount++;
 
             chunkTimings.push(Date.now() - chunkStart);
-            const avgTime = chunkTimings.reduce((a, b) => a + b, 0) / chunkTimings.length;
+            const recentTimings = chunkTimings.slice(-8);
+            const avgTime = recentTimings.reduce((a, b) => a + b, 0) / recentTimings.length;
             const remaining = (chunks.length - i - 1) * avgTime;
-            if (remaining > 0) progressEta.textContent = formatEta(remaining);
+            progressEta.textContent = remaining > 0 ? formatEta(remaining) : '';
 
-            if ((i + 1) % 3 === 0) {
-                saveCheckpoint(currentJobId, chunks, i + 1, translatedParts, currentTranslationMode);
-            }
+            // Save after every successful chunk to avoid losing up to three chunks.
+            saveCheckpoint(currentJobId, chunks, i + 1, translatedParts, currentTranslationMode);
 
             if (i % 2 === 0 || i === chunks.length - 1) {
                 document.getElementById('translationDisplay').textContent = translatedParts.join('\n\n');
@@ -1387,19 +1588,12 @@ async function runTranslation(startFromIndex = 0) {
         progressFill.style.width = '100%';
         progressPct.textContent = '100%';
         progressEta.textContent = '';
-
-        if (successCount === chunks.length) {
-            progressStatus.textContent = `✅ แปลเสร็จสมบูรณ์ ${translatedParts.length} chunk`;
-            progressStatus.style.color = 'var(--success)';
-            clearCheckpoint(currentJobId);
-            document.getElementById('consistencyBtn').style.display = 'inline-block';
-        } else {
-            progressStatus.textContent = `⚠️ แปลเสร็จ ${successCount} จาก ${chunks.length} chunk`;
-            progressStatus.style.color = 'var(--accent)';
-        }
-
-    } catch(err) {
-        if (!err.message.includes('Translation failed')) showError(`เกิดข้อผิดพลาด: ${err.message}`);
+        progressStatus.textContent = `✅ แปลเสร็จสมบูรณ์ ${translatedParts.length} chunk`;
+        progressStatus.style.color = 'var(--success)';
+        clearCheckpoint(currentJobId);
+        document.getElementById('consistencyBtn').style.display = 'inline-block';
+    } catch (err) {
+        console.error('Translation stopped:', err);
     } finally {
         translateBtn.disabled = false;
         resetBtn.style.display = 'inline-flex';
